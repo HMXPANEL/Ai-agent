@@ -1,0 +1,66 @@
+{
+  "name": "main-and-smart-capsule-smoke",
+  "package": "ai.closepaw",
+  "steps": [
+    {
+      "name": "Reset app state",
+      "action": "force_stop"
+    },
+    {
+      "name": "Launch app",
+      "action": "start_app"
+    },
+    {
+      "name": "Wait home screen stable",
+      "action": "wait",
+      "ms": 1600
+    },
+    {
+      "name": "Verify Send button visible",
+      "action": "assert_text",
+      "text": "Send",
+      "continue_on_fail": true
+    },
+    {
+      "name": "Wait capsule state render",
+      "action": "wait",
+      "ms": 900
+    },
+    {
+      "name": "Tap Takeover button if present",
+      "action": "tap_desc",
+      "desc": "Takeover",
+      "retries": 2,
+      "retry_interval_ms": 1000,
+      "continue_on_fail": true
+    },
+    {
+      "name": "Wait post-Takeover UI",
+      "action": "wait",
+      "ms": 700
+    },
+    {
+      "name": "Tap Add note button if present",
+      "action": "tap_text",
+      "text": "Add note",
+      "retries": 2,
+      "retry_interval_ms": 800,
+      "continue_on_fail": true
+    },
+    {
+      "name": "Input supplemental text",
+      "action": "type",
+      "text": "Please continue this flow with more detail.",
+      "submit": false,
+      "continue_on_fail": true
+    },
+    {
+      "name": "Take manual screenshot marker",
+      "action": "screenshot"
+    },
+    {
+      "name": "Go back to previous screen",
+      "action": "back"
+    }
+  ]
+}

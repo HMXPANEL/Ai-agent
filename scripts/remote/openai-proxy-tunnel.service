@@ -1,0 +1,15 @@
+[Unit]
+Description=OpenAI proxy SSH tunnel to laptop (autossh)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment="AUTOSSH_GATETIME=0"
+EnvironmentFile=-%h/.config/closepaw/proxy-tunnel.env
+ExecStart=/bin/bash -c ': "${PROXY_HOST:?Set PROXY_HOST in ~/.config/closepaw/proxy-tunnel.env}"; : "${PROXY_PORT:=18080}"; : "${PROXY_USER:=%u}"; source ~/.keychain/%H-sh 2>/dev/null; exec /usr/bin/autossh -M 0 -N -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" -o "ExitOnForwardFailure yes" -L "${PROXY_PORT}:127.0.0.1:${PROXY_PORT}" "${PROXY_USER}@${PROXY_HOST}"'
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
