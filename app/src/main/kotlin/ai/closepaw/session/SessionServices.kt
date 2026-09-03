@@ -39,6 +39,7 @@ import ai.closepaw.tool.impl.BrowserScriptTraceSink
 import ai.closepaw.tool.impl.DefaultBrowserScriptCapabilityGate
 import ai.closepaw.tool.impl.RememberExperienceTool
 import ai.closepaw.trace.TraceRecorder
+import ai.closepaw.util.HmxDiagnostics
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -106,7 +107,8 @@ class SessionServices internal constructor(
         val agentSkillManager: AgentSkillManager = AgentSkillManager(java.io.File("")),
         val userResponseChannel: UserResponseChannel = UserResponseChannel(),
         val memoryStore: MemoryStore = MemoryStore(java.io.File("")),
-        val memoryRecaller: MemoryRecaller = MemoryRecaller(memoryStore)
+        val memoryRecaller: MemoryRecaller = MemoryRecaller(memoryStore),
+        val hmxDiagnostics: HmxDiagnostics = HmxDiagnostics.disabled()
 ) {
     companion object {
         private const val TAG = "SessionServices"
@@ -150,6 +152,10 @@ class SessionServices internal constructor(
             val skillsDir = java.io.File(context.filesDir, "skills")
             installBundledAgentSkills(context, skillsDir)
             val settingsStore = AppSettingsStore(context)
+            val hmxDiagnostics = HmxDiagnostics.create(
+                    context = context.applicationContext,
+                    enabled = settingsStore.loadDiagnosticsEnabled()
+            )
             // Snapshot once at session start — KISS "next session" semantics: toggling a
             // skill in Settings does not mutate this manager mid-session.
             val disabledAgentSkills = settingsStore.disabledAgentSkills.value
@@ -226,7 +232,8 @@ class SessionServices internal constructor(
                     appSkillRepository = appSkillRepository,
                     agentSkillManager = agentSkillManager,
                     memoryStore = memoryStore,
-                    memoryRecaller = memoryRecaller
+                    memoryRecaller = memoryRecaller,
+                    hmxDiagnostics = hmxDiagnostics
             )
         }
 
@@ -351,7 +358,8 @@ class SessionServices internal constructor(
             agentSkillManager: AgentSkillManager = this.agentSkillManager,
             userResponseChannel: UserResponseChannel = this.userResponseChannel,
             memoryStore: MemoryStore = this.memoryStore,
-            memoryRecaller: MemoryRecaller = this.memoryRecaller
+            memoryRecaller: MemoryRecaller = this.memoryRecaller,
+            hmxDiagnostics: HmxDiagnostics = this.hmxDiagnostics
     ): SessionServices {
         return SessionServices(
                 toolRegistry = toolRegistry,
@@ -373,7 +381,8 @@ class SessionServices internal constructor(
                 agentSkillManager = agentSkillManager,
                 userResponseChannel = userResponseChannel,
                 memoryStore = memoryStore,
-                memoryRecaller = memoryRecaller
+                memoryRecaller = memoryRecaller,
+                hmxDiagnostics = hmxDiagnostics
         )
     }
 
@@ -395,6 +404,7 @@ class SessionServices internal constructor(
         runStep("llmClientFactory.cleanupAll", failures) { llmClientFactory.cleanupAll() }
         // Flush/close trace last so we still capture teardown artifacts if needed
         runStep("traceRecorder.close", failures) { traceRecorder.close() }
+        runStep("hmxDiagnostics.close", failures) { hmxDiagnostics.close() }
 
         Log.i(TAG, "SessionServices cleaned up (failures=${failures.size})")
         return if (failures.isEmpty()) CleanupResult.Success else CleanupResult.PartialFailure(failures)

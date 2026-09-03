@@ -31,6 +31,7 @@ data class AppSettings(
         val otherBaseUrl: String,
         val otherModelId: String,
         val approvalMode: ApprovalMode,
+        val diagnosticsEnabled: Boolean = false,
 )
 
 class AppSettingsStore(private val context: Context) {
@@ -53,6 +54,7 @@ class AppSettingsStore(private val context: Context) {
         private const val KEY_OTHER_MODEL_ID = "other_model_id"
         private const val KEY_DISABLED_AGENT_SKILLS = "disabled_agent_skills"
         private const val KEY_APPROVAL_MODE = "approval_mode"
+        private const val KEY_DIAGNOSTICS_ENABLED = "diagnostics_enabled"
 
         const val DEFAULT_MODEL = "glm-5"
         const val DEFAULT_DEBUG_MODE = false
@@ -61,6 +63,7 @@ class AppSettingsStore(private val context: Context) {
         val DEFAULT_LOCAL_MODEL: LocalModelOption = AVAILABLE_LOCAL_MODELS.first()
         val DEFAULT_PLATFORM_MODE = PlatformMode.ACCESSIBILITY
         const val DEFAULT_TRACE_ENABLED = false
+        const val DEFAULT_DIAGNOSTICS_ENABLED = false
         const val DEFAULT_BROWSER_SCRIPT_ENABLED = false
         const val DEFAULT_TERMUX_SHELL_ENABLED = true
         val DEFAULT_APPROVAL_MODE = ApprovalMode.SMART
@@ -114,6 +117,7 @@ class AppSettingsStore(private val context: Context) {
             DEFAULT_PLATFORM_MODE
         }
         val traceEnabled = prefs.getBoolean(KEY_TRACE_ENABLED, DEFAULT_TRACE_ENABLED)
+        val diagnosticsEnabled = prefs.getBoolean(KEY_DIAGNOSTICS_ENABLED, DEFAULT_DIAGNOSTICS_ENABLED)
         val browserScriptEnabled =
                 prefs.getBoolean(KEY_BROWSER_SCRIPT_ENABLED, DEFAULT_BROWSER_SCRIPT_ENABLED)
         val termuxShellEnabled = prefs.getBoolean(
@@ -146,6 +150,7 @@ class AppSettingsStore(private val context: Context) {
                 otherBaseUrl = otherBaseUrl,
                 otherModelId = otherModelId,
                 approvalMode = approvalMode,
+                diagnosticsEnabled = diagnosticsEnabled,
         )
     }
 
@@ -179,6 +184,13 @@ class AppSettingsStore(private val context: Context) {
 
     fun saveTraceEnabled(value: Boolean) {
         prefs().edit().putBoolean(KEY_TRACE_ENABLED, value).apply()
+    }
+
+    fun loadDiagnosticsEnabled(): Boolean =
+        prefs().getBoolean(KEY_DIAGNOSTICS_ENABLED, DEFAULT_DIAGNOSTICS_ENABLED)
+
+    fun saveDiagnosticsEnabled(value: Boolean) {
+        prefs().edit().putBoolean(KEY_DIAGNOSTICS_ENABLED, value).apply()
     }
 
     fun saveBrowserScriptEnabled(value: Boolean) {

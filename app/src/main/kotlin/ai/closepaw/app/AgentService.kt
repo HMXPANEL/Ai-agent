@@ -326,12 +326,15 @@ class AgentService : AccessibilityService() {
     private fun observeSession(agentSession: AgentSession) {
         eventCollectorJob?.cancel()
 
-        val recordingService = agentSession.getServices().recordingService
+        val services = agentSession.getServices()
+        val recordingService = services.recordingService
+        val diagnostics = services.hmxDiagnostics
 
         eventCollectorJob =
                 serviceScope.launch {
                     try {
                         agentSession.events.collect { event ->
+                            diagnostics.onAgentEvent(event)
                             try {
                                 eventHandler.handleEvent(event, recordingService)
                             } catch (e: Exception) {
