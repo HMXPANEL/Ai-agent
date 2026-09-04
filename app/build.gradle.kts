@@ -33,6 +33,12 @@ android {
     // we fall back to null and the release variant simply won't be signed —
     // debug builds use Android's default debug keystore and are unaffected.
     signingConfigs {
+        create("debugConfig") {
+            storeFile = file("${rootDir}/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         create("release") {
             val keystorePath = System.getenv("KEYSTORE_PATH")
             if (!keystorePath.isNullOrBlank() && file(keystorePath).exists()) {
@@ -46,6 +52,7 @@ android {
 
     buildTypes {
         debug {
+            signingConfig = signingConfigs.getByName("debugConfig")
             val evalSsl = project.findProperty("insecureSslForEval")?.toString()?.toBoolean() ?: false
             buildConfigField("boolean", "INSECURE_SSL_FOR_EVAL", evalSsl.toString())
         }

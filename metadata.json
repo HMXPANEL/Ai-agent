@@ -1,0 +1,6 @@
+{
+  "name": "ClosePaw",
+  "description": "On-device automation agent app",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
