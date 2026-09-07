@@ -76,6 +76,14 @@ class ToolRegistry {
      * Get all registered tools.
      */
     fun getAll(): List<ToolSpec> = tools.values.toList()
+
+    /**
+     * Get only the tools whose [ToolSpec.requiredCapabilities] are all AVAILABLE
+     * per [manager] (Phase 3). UNKNOWN/DEGRADED fail closed: such tools are excluded.
+     * [getAll] is unchanged — this is additive filtering, not a replacement.
+     */
+    fun getAvailable(manager: CapabilityManager): List<ToolSpec> =
+        tools.values.filter { manager.canUse(it.requiredCapabilities) }
     
     /**
      * Check if a tool is registered.

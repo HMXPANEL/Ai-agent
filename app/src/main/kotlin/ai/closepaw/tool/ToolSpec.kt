@@ -17,6 +17,14 @@ import java.util.concurrent.atomic.AtomicBoolean
 interface ToolSpec {
     /** Unique name of the tool (used in LLM function calling) */
     val name: String
+
+    /**
+     * HMX capabilities required to expose this tool (Phase 3).
+     * Defaults to empty so existing tools keep their behavior until the
+     * Phase 4 DeviceStateProvider lets [CapabilityManager] filter them.
+     */
+    val requiredCapabilities: Set<Capability>
+        get() = emptySet()
     
     /** Human-readable description for the LLM */
     val description: String
