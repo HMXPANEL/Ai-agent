@@ -8,6 +8,7 @@ import ai.closepaw.agent.Agent
 import ai.closepaw.agent.AgentEventDispatcher
 import ai.closepaw.agent.AgentExecutionConfig
 import ai.closepaw.agent.AgentStopReason
+import ai.closepaw.agent.HmxAgent
 import ai.closepaw.agent.definition.AgentDefRegistry
 import ai.closepaw.agent.definition.ResolvedAgentRole
 import ai.closepaw.agent.subagent.IsolatedSubAgentRunner
@@ -118,7 +119,17 @@ internal class SessionAgentRunner(
 
         val newAgentJob = scope.launch {
             try {
-                val result = newAgent.run()
+                // Phase 2: all runs go through the unified HmxAgent brain, which
+                // delegates to the existing Agent and emits orchestration events.
+                // Pause/stop below still drive the Agent directly (legacy path intact).
+                val hmxAgent = HmxAgent(
+                    executor = newAgent,
+                    eventBus = services.hmxDiagnostics.eventBus,
+                    goal = taskInput,
+                    sessionId = sessionId.value,
+                    taskId = taskId,
+                )
+                val result = hmxAgent.run()
                 deliverCompletion(result)
             } catch (e: CancellationException) {
                 if (signal.isCompleted) {

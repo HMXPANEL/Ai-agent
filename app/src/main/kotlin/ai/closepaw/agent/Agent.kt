@@ -26,7 +26,7 @@ class Agent(
         private val compactor: Compactor,
         private val eventEmitter: suspend (AgentEvent) -> Unit,
         private val cancellationSignal: CompletableDeferred<AgentStopReason>
-) {
+) : HmxAgentExecutor {
     companion object {
         private const val TAG = "Agent"
         private const val MAX_RECOVERABLE_RETRIES = 1
@@ -56,7 +56,7 @@ class Agent(
                     compactor = compactor
             )
 
-    suspend fun run(): AgentStopReason {
+    override suspend fun run(): AgentStopReason {
         Log.i(TAG, "Starting agent for goal: ${config.goal}")
         eventDispatcher.status("🚀 Starting agent...")
         trace.sessionStarted(config)
@@ -210,7 +210,7 @@ class Agent(
      * Request pause. Returns a [Deferred] that completes when the agent
      * actually enters the paused state (i.e. the current turn finishes).
      */
-    suspend fun pause(): Deferred<Unit> {
+    override suspend fun pause(): Deferred<Unit> {
         val confirmed = CompletableDeferred<Unit>()
         lifecycleMutex.withLock {
             pauseState.value = true
@@ -220,7 +220,7 @@ class Agent(
         return confirmed
     }
 
-    suspend fun resume() {
+    override suspend fun resume() {
         lifecycleMutex.withLock {
             pauseConfirmed?.complete(Unit)
             pauseConfirmed = null
@@ -229,7 +229,7 @@ class Agent(
         eventDispatcher.status("▶️ Resuming...")
     }
 
-    fun stop() {
+    override fun stop() {
         stopRequested.set(true)
         pauseState.value = false
     }
