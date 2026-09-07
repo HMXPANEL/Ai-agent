@@ -25,7 +25,7 @@ open class SensitiveDataFilter {
     }
 
     companion object {
-        private const val FLAGS = setOf<RegexOption>(RegexOption.IGNORE_CASE)
+        private val FLAGS = setOf(RegexOption.IGNORE_CASE)
 
         private val KEY_VALUE_PATTERN = Regex(
             "\\b(password|passwd|pwd|passcode|secret|api[_ -]?key|access[_ -]?token|" +
