@@ -1,9 +1,11 @@
 package ai.closepaw.agent
 
 import ai.closepaw.trace.RuntimeEventBus
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 class TaskOrchestratorTest {
@@ -59,8 +61,23 @@ class TaskOrchestratorTest {
     }
 
     @Test
-    fun worksWithoutEventBus(): Unit = runBlocking {
+    fun cancellationPropagatesInsteadOfBecomingError(): Unit = runBlocking {
         val orchestrator = TaskOrchestrator(eventBus = null)
+        var executions = 0
+        try {
+            orchestrator.orchestrate(HmxTaskInput("goal")) {
+                executions++
+                throw CancellationException("interrupt")
+            }
+            fail("CancellationException must propagate, not convert to Error")
+        } catch (e: CancellationException) {
+            // Expected: interrupt path (SessionAgentRunner cancel) keeps working.
+        }
+        assertEquals(1, executions)
+    }
+
+    @Test
+    fun worksWithoutEventBus(): Unit = runBlocking {        val orchestrator = TaskOrchestrator(eventBus = null)
 
         val result = orchestrator.orchestrate(HmxTaskInput("goal")) { AgentStopReason.UserRequested }
 

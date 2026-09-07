@@ -2,6 +2,7 @@ package ai.closepaw.agent
 
 import ai.closepaw.trace.RuntimeEvent
 import ai.closepaw.trace.RuntimeEventBus
+import kotlinx.coroutines.CancellationException
 
 /**
  * Single choke point for HMX task execution (Phase 2).
@@ -25,6 +26,12 @@ class TaskOrchestrator(
         val plan = try {
             emit("planning_started", input)
             planner.plan(input).also { emit("planning_completed", input) }
+        } catch (e: CancellationException) {
+            // Cancellation is not a failure: propagate so the caller's
+            // CancellationException handler (e.g. SessionAgentRunner's
+            // user-interrupt path) keeps working.
+            emit("planning_cancelled", input)
+            throw e
         } catch (e: Exception) {
             emit("planning_failed", input, e.message)
             HmxPlan.fallback(input.goal)
@@ -32,6 +39,9 @@ class TaskOrchestrator(
         emit("execution_started", input)
         return try {
             execute().also { emit("execution_completed", input) }
+        } catch (e: CancellationException) {
+            emit("execution_cancelled", input)
+            throw e
         } catch (e: Exception) {
             emit("execution_failed", input, e.message ?: e::class.java.simpleName)
             AgentStopReason.Error("HMX execution failed for '${plan.goal}': ${e.message}")

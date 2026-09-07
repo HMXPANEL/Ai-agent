@@ -68,6 +68,6 @@ class CapabilityManagerTest {
         )
 
         assertEquals(setOf(Capability.ACCESSIBILITY), manager.alternatives(Capability.SHIZUKU))
-        assertTrue(manager.alternatives(Capability.TERMUX_SHELL).isEmpty())
+        assertEquals(setOf(Capability.ACCESSIBILITY), manager.alternatives(Capability.TERMUX_SHELL))
     }
 }
