@@ -1,6 +1,6 @@
 package ai.closepaw.util
 
-import org.junit.Assert.assertDoesNotThrow
+import org.junit.Assert.fail
 import org.junit.Test
 
 class RuntimeLoggerFailureTest {
@@ -12,8 +12,10 @@ class RuntimeLoggerFailureTest {
         val brokenSink = DiagnosticLogSink { error("sink failure") }
         val logger = RuntimeLogger(filter = brokenFilter, sink = brokenSink, logcat = { _, _, _, _ -> error("logcat failure") })
 
-        assertDoesNotThrow {
+        try {
             logger.error("failure", "message", mapOf("secret" to "value"), IllegalStateException("boom"))
+        } catch (e: Throwable) {
+            fail("logging call must never throw, but threw: $e")
         }
     }
 }
