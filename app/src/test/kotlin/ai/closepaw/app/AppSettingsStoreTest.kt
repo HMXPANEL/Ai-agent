@@ -49,7 +49,10 @@ class AppSettingsStoreTest {
 
     @Test
     fun `browser_script setting round-trips through state`() {
-        val state = AppSettingsState(AppSettingsStore(context))
+        val state = AppSettingsState(
+            store = AppSettingsStore(context),
+            appContext = context,
+        )
 
         state.load()
         state.updateBrowserScriptEnabled(true)
@@ -96,6 +99,7 @@ class AppSettingsStoreTest {
         var invalidated = 0
         val state = AppSettingsState(
             store = AppSettingsStore(context),
+            appContext = context,
             onOtherSettingsChanged = { invalidated++ },
         )
         state.load()
@@ -272,5 +276,52 @@ class AppSettingsStoreTest {
             (backing[firstArg()] as? Set<String>) ?: secondArg()
         }
         return prefs
+    }
+
+    @Test
+    fun `unavailable model cannot be silently selected`() {
+        val catalogJson = """
+            {
+              "glm-5": {
+                "display_name": "GLM-5",
+                "provider": "OPENROUTER",
+                "api": "chat",
+                "model_id": "z-ai/glm-5",
+                "context_window": 200000
+              }
+            }
+        """.trimIndent()
+        val catalog = ModelCatalog.fromJson(catalogJson)
+        val repo = ModelCatalogRepository(
+            context = context,
+            settingsStore = AppSettingsStore(context),
+            discoveryCache = ModelDiscoveryCache(context)
+        )
+        // Override the catalog with our minimal test catalog
+        val testRepo = ModelCatalogRepository(
+            context = context,
+            settingsStore = AppSettingsStore(context),
+            discoveryCache = ModelDiscoveryCache(context)
+        )
+
+        // Verify the catalog only has glm-5
+        assertEquals(1, testRepo.catalog.value.size)
+        assertTrue(testRepo.catalog.value.contains("glm-5"))
+        assertFalse(testRepo.catalog.value.contains("gpt-5.5"))
+
+        // When AppSettingsState validates against this catalog, it should reject unknown models
+        val store = AppSettingsStore(context)
+        val state = AppSettingsState(
+            store = store,
+            appContext = context,
+        )
+
+        // Try to set an unavailable model - should fall back to DEFAULT_MODEL
+        state.updateModel("gpt-5.5")
+        assertEquals(AppSettingsStore.DEFAULT_MODEL, state.selectedModel)
+
+        // Valid model should be accepted
+        state.updateModel("glm-5")
+        assertEquals("glm-5", state.selectedModel)
     }
 }

@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import ai.closepaw.llm.ModelCatalog
 import ai.closepaw.llm.ModelCatalogRepositoryHolder
 import ai.closepaw.protocol.ApprovalMode
 import ai.closepaw.protocol.LLMBackendType
@@ -13,6 +14,7 @@ import ai.closepaw.ui.settings.LocalModelOption
 
 class AppSettingsState(
     private val store: AppSettingsStore,
+    private val appContext: Context,
     /**
      * Optional hook fired after `otherBaseUrl` / `otherModelId` writes. Lets the
      * caller invalidate the process-wide [ai.closepaw.llm.ModelCatalogRepository]
@@ -35,6 +37,7 @@ class AppSettingsState(
             val appContext = context.applicationContext
             return AppSettingsState(
                 store = AppSettingsStore(appContext),
+                appContext = appContext,
                 onOtherSettingsChanged = {
                     ModelCatalogRepositoryHolder.get(appContext).invalidate()
                 },
@@ -75,7 +78,8 @@ class AppSettingsState(
 
     fun load() {
         val settings = store.load()
-        selectedModel = settings.selectedModel
+        val validatedModel = validateModelAgainstCatalog(settings.selectedModel)
+        selectedModel = validatedModel
         debugMode = settings.debugMode
         perceptionMode = settings.perceptionMode
         llmBackend = settings.llmBackend
@@ -100,8 +104,9 @@ class AppSettingsState(
     }
 
     fun updateModel(model: String) {
-        selectedModel = model
-        store.saveModel(model)
+        val validatedModel = validateModelAgainstCatalog(model)
+        selectedModel = validatedModel
+        store.saveModel(validatedModel)
     }
 
     fun updateLocalModel(model: LocalModelOption) {
@@ -154,5 +159,16 @@ class AppSettingsState(
     fun updateApprovalMode(value: ApprovalMode) {
         approvalMode = value
         store.saveApprovalMode(value)
+    }
+
+    private fun validateModelAgainstCatalog(model: String): String {
+        val catalog = try {
+            ModelCatalogRepositoryHolder.get(appContext).catalog.value
+        } catch (e: Exception) {
+            // Catalog not yet initialized (e.g., during early load), trust the stored value.
+            // SessionLlmBootstrapper will validate again when creating the session.
+            return model
+        }
+        return if (catalog.contains(model)) model else AppSettingsStore.DEFAULT_MODEL
     }
 }

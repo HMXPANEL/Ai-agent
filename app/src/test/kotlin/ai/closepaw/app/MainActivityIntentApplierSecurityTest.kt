@@ -18,7 +18,7 @@ import org.junit.Test
  */
 class MainActivityIntentApplierSecurityTest {
 
-    private val settingsState = AppSettingsState(mockk(relaxed = true))
+    private val settingsState = AppSettingsState(mockk(relaxed = true), mockk(relaxed = true), {})
     private val modelLoadingStatusHolder =
         ModelLoadingStatusHolder(mockk(relaxed = true), CoroutineScope(Dispatchers.Unconfined), settingsState)
     private val authStore = AuthStore(mockk(relaxed = true), prefsProvider = { FakeSharedPreferences() })
