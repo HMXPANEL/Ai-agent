@@ -17,6 +17,15 @@ class OpenAIResponseClientTest {
 
     private val apiKey = "sk-test-abc123"
 
+    private val testEntry = ModelEntry(
+        name = "test-responses",
+        displayName = "Test Responses",
+        provider = LLMProvider.OPENAI_API,
+        api = ApiType.RESPONSE,
+        modelId = "gpt-4o",
+        contextWindow = 128000,
+    )
+
     private fun userMsg(text: String): ResponseInputItem =
         ResponseInputItem.ofEasyInputMessage(
             EasyInputMessage.builder()
@@ -27,7 +36,7 @@ class OpenAIResponseClientTest {
 
     @Test
     fun `buildResponseParams forwards maxOutputTokens to Responses API`() {
-        val client = OpenAIResponseClient(apiKey)
+        val client = OpenAIResponseClient(testEntry, apiKey)
         val params = invokeBuildResponseParams(
             client,
             systemPrompt = "s",
@@ -41,7 +50,7 @@ class OpenAIResponseClientTest {
 
     @Test
     fun `buildResponseParams omits maxOutputTokens when cap is null`() {
-        val client = OpenAIResponseClient(apiKey)
+        val client = OpenAIResponseClient(testEntry, apiKey)
         val params = invokeBuildResponseParams(
             client,
             systemPrompt = "s",

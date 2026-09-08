@@ -78,7 +78,7 @@ class Turn(
                         systemPrompt = systemPrompt,
                         inputItems = request.inputItems,
                         tools = request.tools,
-                        model = request.model
+                        modelId = request.model
                 )
 
         Log.d(
@@ -199,7 +199,7 @@ class Turn(
                         systemPrompt = systemPrompt,
                         inputItems = request.inputItems,
                         tools = request.tools,
-                        model = request.model
+                        modelId = request.model
                 )
                 .collect { event ->
                     when (event) {

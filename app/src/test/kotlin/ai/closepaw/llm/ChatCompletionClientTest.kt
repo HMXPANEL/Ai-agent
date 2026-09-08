@@ -21,6 +21,15 @@ class ChatCompletionClientTest {
 
     private val apiKey = "sk-test-abc123"
 
+    private val testEntry = ModelEntry(
+        name = "test-chat",
+        displayName = "Test Chat",
+        provider = LLMProvider.OPENAI_API,
+        api = ApiType.CHAT,
+        modelId = "gpt-4o",
+        contextWindow = 128000,
+    )
+
     private fun userMsg(text: String): ResponseInputItem =
         ResponseInputItem.ofEasyInputMessage(
             EasyInputMessage.builder()
@@ -45,13 +54,13 @@ class ChatCompletionClientTest {
 
     @Test
     fun `constructor succeeds with just an api key`() {
-        val client = ChatCompletionClient(apiKey)
+        val client = ChatCompletionClient(testEntry, apiKey)
         assertThat(client.isReady()).isTrue()
     }
 
     @Test
     fun `constructor succeeds with custom base url`() {
-        val client = ChatCompletionClient(apiKey, baseUrl = "https://openrouter.ai/api/v1")
+        val client = ChatCompletionClient(testEntry, apiKey, baseUrl = "https://openrouter.ai/api/v1")
         assertThat(client.isReady()).isTrue()
     }
 
@@ -59,7 +68,7 @@ class ChatCompletionClientTest {
 
     @Test
     fun `buildParams produces ChatCompletionCreateParams with system plus user messages and tools`() {
-        val client = ChatCompletionClient(apiKey)
+        val client = ChatCompletionClient(testEntry, apiKey)
         val params = invokeBuildParams(
             client,
             systemPrompt = "you are helpful",
@@ -79,7 +88,7 @@ class ChatCompletionClientTest {
 
     @Test
     fun `buildParams carries empty tools when none provided`() {
-        val client = ChatCompletionClient(apiKey)
+        val client = ChatCompletionClient(testEntry, apiKey)
         val params = invokeBuildParams(
             client,
             systemPrompt = "s",
@@ -93,7 +102,7 @@ class ChatCompletionClientTest {
 
     @Test
     fun `buildParams forwards maxOutputTokens as maxCompletionTokens`() {
-        val client = ChatCompletionClient(apiKey)
+        val client = ChatCompletionClient(testEntry, apiKey)
         val params = invokeBuildParams(
             client,
             systemPrompt = "s",
@@ -107,7 +116,7 @@ class ChatCompletionClientTest {
 
     @Test
     fun `buildParams omits maxCompletionTokens when cap is null`() {
-        val client = ChatCompletionClient(apiKey)
+        val client = ChatCompletionClient(testEntry, apiKey)
         val params = invokeBuildParams(
             client,
             systemPrompt = "s",
@@ -123,7 +132,7 @@ class ChatCompletionClientTest {
 
     @Test
     fun `provider 401 error is classified to plain RuntimeException (non-retryable)`() {
-        val client = ChatCompletionClient(apiKey)
+        val client = ChatCompletionClient(testEntry, apiKey)
         installFailingOpenAIClient(client) {
             // Non-retryable so CloudLlmRetry lets it through on the first attempt
             throw RuntimeException("HTTP 401 Unauthorized")
@@ -135,7 +144,7 @@ class ChatCompletionClientTest {
                     systemPrompt = "s",
                     inputItems = listOf(userMsg("hi")),
                     tools = emptyList(),
-                    model = "gpt-4o"
+                    modelId = "gpt-4o"
                 )
             }
         }.exceptionOrNull()
@@ -151,7 +160,7 @@ class ChatCompletionClientTest {
 
     @Test
     fun `provider SocketTimeoutException triggers retry loop`() {
-        val client = ChatCompletionClient(apiKey)
+        val client = ChatCompletionClient(testEntry, apiKey)
         val attempts = java.util.concurrent.atomic.AtomicInteger(0)
         installFailingOpenAIClient(client) {
             val n = attempts.incrementAndGet()
@@ -174,7 +183,7 @@ class ChatCompletionClientTest {
                     systemPrompt = "s",
                     inputItems = listOf(userMsg("hi")),
                     tools = emptyList(),
-                    model = "gpt-4o"
+                    modelId = "gpt-4o"
                 )
             }
         }

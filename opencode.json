@@ -1,34 +1,50 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "explabs/gpt-6-astra",
   "provider": {
-    "explabs": {
+    "apinex": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "Experiential Labs",
+      "name": "APInex",
       "options": {
-        "baseURL": "https://api.experientiallabs.ai/v1",
-        "apiKey": "{env:EXPLABS_API_KEY}"
+        "baseURL": "https://api.apinex.bond/v1",
+        "apiKey": "{env:APINEX_API_KEY}"
       },
       "models": {
-        "gpt-6-astra": {
-          "name": "GPT-6 Astra",
-          "limit": {
-            "context": 1050000,
-            "output": 128000
-          },
-          "cost": {
-            "input": 0,
-            "output": 0
-          }
+        "free/deepseek-v4-flash-0731": {
+          "name": "FREE • DeepSeek V4 Flash"
         },
-        "gpt-5.6-luna": {
-          "name": "GPT-5.6 Luna"
+        "free/deepseek-v4-pro-0813": {
+          "name": "FREE • DeepSeek V4 Pro"
         },
-        "deepseek-v4-flash": {
-          "name": "DeepSeek V4 Flash"
+        "free/glm-5.3-flash": {
+          "name": "FREE • GLM 5.3 Flash"
         },
-        "qwen3.8-27b": {
-          "name": "Qwen 3.8 27B"
+        "free/gemini-3.1-pro": {
+          "name": "FREE • Gemini 3.1 Pro"
+        },
+
+        "deepseek/v4-flash": {
+          "name": "PAID • DeepSeek V4 Flash"
+        },
+        "deepseek/v4-pro": {
+          "name": "PAID • DeepSeek V4 Pro"
+        },
+        "glm/5.3": {
+          "name": "PAID • GLM 5.3"
+        },
+        "glm/5.3-flash": {
+          "name": "PAID • GLM 5.3 Flash"
+        },
+        "gemini/3.1-pro": {
+          "name": "PAID • Gemini 3.1 Pro"
+        },
+        "gemini/3.8-flash": {
+          "name": "PAID • Gemini 3.8 Flash"
+        },
+        "claude/opus-5": {
+          "name": "PAID • Claude Opus 5"
+        },
+        "claude/sonnet-5": {
+          "name": "PAID • Claude Sonnet 5"
         }
       }
     }

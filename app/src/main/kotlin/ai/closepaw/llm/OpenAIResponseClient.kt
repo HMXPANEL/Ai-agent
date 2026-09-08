@@ -63,8 +63,8 @@ class OpenAIResponseClient(
         systemPrompt: String,
         inputItems: List<ResponseInputItem>,
         tools: List<FunctionTool>,
-        modelId: String = DEFAULT_MODEL,
-        maxOutputTokens: Long? = null,
+        modelId: String,
+        maxOutputTokens: Long?,
     ): ResponsesResult {
         // Use the modelId from the ModelEntry, not the catalog key
         return withContext(Dispatchers.IO) {
@@ -72,7 +72,7 @@ class OpenAIResponseClient(
                     tag = TAG,
                     operationName = "responses chatWithTools"
             ) {
-                executeChatWithTools(systemPrompt, inputItems, tools, this.modelId, maxOutputTokens)
+                executeChatWithTools(systemPrompt, inputItems, tools, this@OpenAIResponseClient.modelId, maxOutputTokens)
             }
         }
     }
@@ -86,7 +86,7 @@ class OpenAIResponseClient(
         systemPrompt: String,
         inputItems: List<ResponseInputItem>,
         tools: List<FunctionTool>,
-        modelId: String = DEFAULT_MODEL
+        modelId: String
     ): Flow<LLMStreamEvent> = callbackFlow {
         Log.d(TAG, "Starting native streaming chat with ${inputItems.size} input items")
         LlmLogger.logInput(TAG, systemPrompt, inputItems, tools)
@@ -105,7 +105,7 @@ class OpenAIResponseClient(
                     val textAccumulator = if (verbose) StringBuilder() else null
                     val toolCalls = if (verbose) mutableListOf<LLMToolCall>() else null
 
-                    val params = buildResponseParams(systemPrompt, inputItems, tools, modelId)
+                    val params = buildResponseParams(systemPrompt, inputItems, tools, this@OpenAIResponseClient.modelId)
                     Log.d(TAG, "Making streaming Responses API call to OpenAI (attempt $attempt)...")
 
                     withContext(Dispatchers.IO) {

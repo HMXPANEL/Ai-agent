@@ -250,7 +250,7 @@ class Compactor(
             systemPrompt = systemPrompt,
             inputItems = input,
             tools = emptyList(),
-            model = model.modelId,
+            modelId = model.modelId,
             maxOutputTokens = maxSummaryTokens,
         )
         val text = result.textContent?.trim().orEmpty()

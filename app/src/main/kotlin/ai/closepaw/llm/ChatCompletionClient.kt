@@ -57,14 +57,14 @@ class ChatCompletionClient(
         systemPrompt: String,
         inputItems: List<ResponseInputItem>,
         tools: List<FunctionTool>,
-        modelId: String = DEFAULT_MODEL,
-        maxOutputTokens: Long? = null,
+        modelId: String,
+        maxOutputTokens: Long?,
     ): ResponsesResult = withContext(Dispatchers.IO) {
         CloudLlmRetry.executeWithRetry(
                 tag = TAG,
                 operationName = "chat-completions chatWithTools"
         ) {
-            executeChatWithTools(systemPrompt, inputItems, tools, this.modelId, maxOutputTokens)
+            executeChatWithTools(systemPrompt, inputItems, tools, this@ChatCompletionClient.modelId, maxOutputTokens)
         }
     }
 
@@ -79,7 +79,7 @@ class ChatCompletionClient(
         LlmLogger.logInput(TAG, systemPrompt, inputItems, tools)
 
         try {
-            val params = buildParams(systemPrompt, inputItems, tools, model, maxOutputTokens)
+            val params = buildParams(systemPrompt, inputItems, tools, modelId, maxOutputTokens)
             val response = client.chat().completions().create(params)
 
             val choice = response.choices().firstOrNull()
@@ -117,7 +117,7 @@ class ChatCompletionClient(
         systemPrompt: String,
         inputItems: List<ResponseInputItem>,
         tools: List<FunctionTool>,
-        modelId: String = DEFAULT_MODEL
+        modelId: String
     ): Flow<LLMStreamEvent> = callbackFlow {
         Log.d(TAG, "Starting streaming Chat Completions with ${inputItems.size} input items")
         LlmLogger.logInput(TAG, systemPrompt, inputItems, tools)
@@ -138,7 +138,7 @@ class ChatCompletionClient(
                 var responseId: String? = null
                 var sawFinishReason = false
 
-                val params = buildParams(systemPrompt, inputItems, tools, this.modelId)
+                val params = buildParams(systemPrompt, inputItems, tools, this@ChatCompletionClient.modelId)
                 Log.d(TAG, "Making streaming Chat API call (attempt $attempt)")
 
                 withContext(Dispatchers.IO) {
@@ -167,10 +167,10 @@ class ChatCompletionClient(
                                 delta.toolCalls().ifPresent { calls ->
                                     for (tcDelta in calls) {
                                         // Safely get index - some OpenAI-compatible providers (e.g., Gemini)
-                                        // omit the index field, which causes OpenAIInvalidDataException.
+                                        // omit the index field, which throws OpenAIInvalidDataException.
                                         // Default to 0 when missing, which works for single tool calls.
                                         val idx: Long = try {
-                                            tcDelta.index().orElse(0L)
+                                            tcDelta.index()
                                         } catch (e: Exception) {
                                             0L
                                         }

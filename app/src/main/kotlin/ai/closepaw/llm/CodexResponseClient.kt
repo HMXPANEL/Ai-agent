@@ -47,7 +47,7 @@ class CodexResponseClient(
         systemPrompt: String,
         inputItems: List<ResponseInputItem>,
         tools: List<FunctionTool>,
-        modelId: String = DEFAULT_MODEL,
+        modelId: String,
         maxOutputTokens: Long?,
     ): ResponsesResult = withContext(Dispatchers.IO) {
         // Codex backend forbids `max_output_tokens` (see CodexRequestBuilder).
@@ -56,7 +56,7 @@ class CodexResponseClient(
         LlmLogger.logInput(TAG, systemPrompt, inputItems, tools)
 
         CloudLlmRetry.executeWithRetry(tag = TAG, operationName = "codex chatWithTools") {
-            val body = CodexRequestBuilder.buildRequestBody(systemPrompt, inputItems, tools, this.modelId)
+                val body = CodexRequestBuilder.buildRequestBody(systemPrompt, inputItems, tools, this@CodexResponseClient.modelId)
             val request = buildRequest(body, headerSupplier())
 
             httpClient.newCall(request).execute().use { response ->
@@ -135,7 +135,7 @@ class CodexResponseClient(
         systemPrompt: String,
         inputItems: List<ResponseInputItem>,
         tools: List<FunctionTool>,
-        modelId: String = DEFAULT_MODEL
+        modelId: String
     ): Flow<LLMStreamEvent> = callbackFlow {
         Log.d(TAG, "Starting Codex streaming chat with ${inputItems.size} input items")
         LlmLogger.logInput(TAG, systemPrompt, inputItems, tools)
@@ -147,7 +147,7 @@ class CodexResponseClient(
                 tag = TAG,
                 emitToFlow = { event -> trySend(event) }
             ) { attempt, emitter ->
-                val body = CodexRequestBuilder.buildRequestBody(systemPrompt, inputItems, tools, this.modelId)
+            val body = CodexRequestBuilder.buildRequestBody(systemPrompt, inputItems, tools, this@CodexResponseClient.modelId)
                 val request = buildRequest(body, headerSupplier())
 
                 withContext(Dispatchers.IO) {

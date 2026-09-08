@@ -31,11 +31,20 @@ class CodexResponseClientTest {
     )
     private val supplier: suspend () -> CodexHeaders = { headers }
 
+    private val testEntry = ModelEntry(
+        name = "test-codex",
+        displayName = "Test Codex",
+        provider = LLMProvider.OPENAI_CODEX,
+        api = ApiType.RESPONSE,
+        modelId = "gpt-5.4",
+        contextWindow = 200000,
+    )
+
     // ── Request construction ──────────────────────────────────────────────
 
     @Test
     fun `buildRequest adds all required Codex headers from supplier`() {
-        val client = CodexResponseClient(supplier)
+        val client = CodexResponseClient(testEntry, supplier)
         val request = invokeBuildRequest(client, """{"foo":"bar"}""", headers)
 
         assertThat(request.url.toString()).isEqualTo(
@@ -55,7 +64,7 @@ class CodexResponseClientTest {
     @Test
     fun `buildRequest omits account id header when supplier returns null`() {
         val noAccount = headers.copy(chatgptAccountId = null)
-        val client = CodexResponseClient { noAccount }
+        val client = CodexResponseClient(testEntry) { noAccount }
         val request = invokeBuildRequest(client, "{}", noAccount)
         assertThat(request.header("chatgpt-account-id")).isNull()
     }
@@ -67,7 +76,7 @@ class CodexResponseClientTest {
             calls++
             headers
         }
-        val client = CodexResponseClient(dyn)
+        val client = CodexResponseClient(testEntry, dyn)
         // Simulate two independent calls — client caches nothing.
         dyn.invoke()
         dyn.invoke()
@@ -125,14 +134,14 @@ class CodexResponseClientTest {
 
     @Test(expected = RateLimitException::class)
     fun `429 response maps to RateLimitException`() {
-        val client = CodexResponseClient(supplier)
+        val client = CodexResponseClient(testEntry, supplier)
         val response = mockResponse(429, """{"error":{"code":"rate_limit_exceeded","message":"slow down"}}""")
         invokeHandleErrorResponse(client, response)
     }
 
     @Test(expected = RateLimitException::class)
     fun `usage_limit error code maps to RateLimitException regardless of status`() {
-        val client = CodexResponseClient(supplier)
+        val client = CodexResponseClient(testEntry, supplier)
         val response = mockResponse(
             200,
             """{"error":{"code":"usage_limit_reached","message":"plan exceeded","plan_type":"plus"}}"""
@@ -142,7 +151,7 @@ class CodexResponseClientTest {
 
     @Test
     fun `401 maps to IllegalStateException mentioning token`() {
-        val client = CodexResponseClient(supplier)
+        val client = CodexResponseClient(testEntry, supplier)
         val response = mockResponse(401, """{"error":{"message":"bad token"}}""")
         val ex = runCatching { invokeHandleErrorResponse(client, response) }.exceptionOrNull()
 
@@ -152,14 +161,14 @@ class CodexResponseClientTest {
 
     @Test(expected = TransientException::class)
     fun `5xx maps to TransientException`() {
-        val client = CodexResponseClient(supplier)
+        val client = CodexResponseClient(testEntry, supplier)
         val response = mockResponse(503, "service unavailable")
         invokeHandleErrorResponse(client, response)
     }
 
     @Test
     fun `other 4xx maps to plain RuntimeException (not retryable)`() {
-        val client = CodexResponseClient(supplier)
+        val client = CodexResponseClient(testEntry, supplier)
         val response = mockResponse(400, """{"error":{"message":"bad request"}}""")
         val ex = runCatching { invokeHandleErrorResponse(client, response) }.exceptionOrNull()
 
