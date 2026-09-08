@@ -286,34 +286,14 @@ class AppSettingsStoreTest {
 
     @Test
     fun `unavailable model cannot be silently selected`() {
-        val catalogJson = """
-            {
-              "glm-5": {
-                "display_name": "GLM-5",
-                "provider": "OPENROUTER",
-                "api": "chat",
-                "model_id": "z-ai/glm-5",
-                "context_window": 200000
-              }
-            }
-        """.trimIndent()
-        val catalog = ModelCatalog.fromJson(catalogJson)
-        val repo = ModelCatalogRepository(
-            context = context,
-            settingsStore = AppSettingsStore(context),
-            discoveryCache = ModelDiscoveryCache(context)
-        )
-        // Override the catalog with our minimal test catalog
-        val testRepo = ModelCatalogRepository(
-            context = context,
-            settingsStore = AppSettingsStore(context),
-            discoveryCache = ModelDiscoveryCache(context)
-        )
+        // Use the real catalog from the repository (which loads from llm_models.json)
+        // gpt-5.5 was removed from llm_models.json, so it should not be in the catalog
+        val repo = ModelCatalogRepositoryHolder.get(context)
+        val catalog = repo.catalog.value
 
-        // Verify the catalog only has glm-5
-        assertEquals(1, testRepo.catalog.value.size)
-        assertTrue(testRepo.catalog.value.contains("glm-5"))
-        assertFalse(testRepo.catalog.value.contains("gpt-5.5"))
+        // Verify gpt-5.5 is not in the catalog (it was removed)
+        assertFalse(catalog.contains("gpt-5.5"))
+        assertFalse(catalog.contains("gpt-5.5-codex"))
 
         // When AppSettingsState validates against this catalog, it should reject unknown models
         val store = AppSettingsStore(context)
