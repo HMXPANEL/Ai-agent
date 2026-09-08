@@ -2,6 +2,9 @@ package ai.closepaw.app
 
 import android.content.Context
 import android.content.SharedPreferences
+import ai.closepaw.llm.ModelCatalog
+import ai.closepaw.llm.ModelCatalogRepository
+import ai.closepaw.llm.ModelDiscoveryCache
 import ai.closepaw.protocol.AppTier
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
@@ -14,6 +17,9 @@ import org.json.JSONObject
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 
 class AppSettingsStoreTest {
     private lateinit var backing: MutableMap<String, Any?>
