@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import ai.closepaw.llm.ModelCatalog
 import ai.closepaw.llm.ModelCatalogRepository
+import ai.closepaw.llm.ModelCatalogRepositoryHolder
 import ai.closepaw.llm.ModelDiscoveryCache
 import ai.closepaw.protocol.AppTier
 import com.google.common.truth.Truth.assertThat
