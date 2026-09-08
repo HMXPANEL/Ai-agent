@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicReference
  * Streaming:     client.chat().completions().createStreaming()
  */
 class ChatCompletionClient(
+    entry: ModelEntry,
     apiKey: String,
     baseUrl: String? = null
 ) : LLMClient() {
@@ -34,6 +35,8 @@ class ChatCompletionClient(
     companion object {
         private const val TAG = "ChatCompletionClient"
     }
+
+    private val modelId: String = entry.modelId
 
     init {
         InsecureSslConfig.validateBaseUrl(baseUrl)
@@ -54,14 +57,14 @@ class ChatCompletionClient(
         systemPrompt: String,
         inputItems: List<ResponseInputItem>,
         tools: List<FunctionTool>,
-        model: String,
-        maxOutputTokens: Long?,
+        modelId: String = DEFAULT_MODEL,
+        maxOutputTokens: Long? = null,
     ): ResponsesResult = withContext(Dispatchers.IO) {
         CloudLlmRetry.executeWithRetry(
                 tag = TAG,
                 operationName = "chat-completions chatWithTools"
         ) {
-            executeChatWithTools(systemPrompt, inputItems, tools, model, maxOutputTokens)
+            executeChatWithTools(systemPrompt, inputItems, tools, this.modelId, maxOutputTokens)
         }
     }
 
@@ -69,7 +72,7 @@ class ChatCompletionClient(
         systemPrompt: String,
         inputItems: List<ResponseInputItem>,
         tools: List<FunctionTool>,
-        model: String,
+        modelId: String,
         maxOutputTokens: Long?,
     ): ResponsesResult {
         Log.d(TAG, "Calling Chat Completions API with ${inputItems.size} input items, ${tools.size} tools")
@@ -114,7 +117,7 @@ class ChatCompletionClient(
         systemPrompt: String,
         inputItems: List<ResponseInputItem>,
         tools: List<FunctionTool>,
-        model: String
+        modelId: String = DEFAULT_MODEL
     ): Flow<LLMStreamEvent> = callbackFlow {
         Log.d(TAG, "Starting streaming Chat Completions with ${inputItems.size} input items")
         LlmLogger.logInput(TAG, systemPrompt, inputItems, tools)
@@ -135,7 +138,7 @@ class ChatCompletionClient(
                 var responseId: String? = null
                 var sawFinishReason = false
 
-                val params = buildParams(systemPrompt, inputItems, tools, model)
+                val params = buildParams(systemPrompt, inputItems, tools, this.modelId)
                 Log.d(TAG, "Making streaming Chat API call (attempt $attempt)")
 
                 withContext(Dispatchers.IO) {
@@ -163,7 +166,14 @@ class ChatCompletionClient(
                                 // Tool call deltas (streamed incrementally)
                                 delta.toolCalls().ifPresent { calls ->
                                     for (tcDelta in calls) {
-                                        val idx = tcDelta.index()
+                                        // Safely get index - some OpenAI-compatible providers (e.g., Gemini)
+                                        // omit the index field, which causes OpenAIInvalidDataException.
+                                        // Default to 0 when missing, which works for single tool calls.
+                                        val idx: Long = try {
+                                            tcDelta.index().orElse(0L)
+                                        } catch (e: Exception) {
+                                            0L
+                                        }
 
                                         if (!toolCallBuilders.containsKey(idx)) {
                                             toolCallBuilders[idx] =
@@ -273,7 +283,7 @@ class ChatCompletionClient(
         systemPrompt: String,
         inputItems: List<ResponseInputItem>,
         tools: List<FunctionTool>,
-        model: String,
+        modelId: String,
         maxOutputTokens: Long? = null,
     ): ChatCompletionCreateParams {
         val messages = buildList {
@@ -283,7 +293,7 @@ class ChatCompletionClient(
         val chatTools = ChatCompletionInterop.convertTools(tools)
 
         val builder = ChatCompletionCreateParams.builder()
-            .model(ChatModel.of(model))
+            .model(ChatModel.of(modelId))
             .messages(messages)
             .tools(chatTools)
 

@@ -38,7 +38,7 @@ abstract class LLMClient {
      * @param systemPrompt System/developer instructions
      * @param inputItems Conversation history as ResponseInputItem list
      * @param tools Tool definitions for function calling
-     * @param model Model to use (ignored for local models)
+     * @param modelId The model ID to send to the provider (e.g., "gpt-5.4")
      * @param maxOutputTokens Optional cap on the response output token count. Used by
      *   bounded-length calls such as compaction summaries. Cloud providers translate
      *   it into the appropriate provider field (Responses API: `max_output_tokens`;
@@ -51,7 +51,7 @@ abstract class LLMClient {
         systemPrompt: String,
         inputItems: List<ResponseInputItem>,
         tools: List<FunctionTool>,
-        model: String = DEFAULT_MODEL,
+        modelId: String = DEFAULT_MODEL,
         maxOutputTokens: Long? = null,
     ): ResponsesResult
     
@@ -64,14 +64,14 @@ abstract class LLMClient {
      * @param systemPrompt System/developer instructions
      * @param inputItems Conversation history as ResponseInputItem list
      * @param tools Tool definitions for function calling
-     * @param model Model to use (ignored for local models)
+     * @param modelId The model ID to send to the provider (e.g., "gpt-5.4")
      * @return Flow of LLMStreamEvent
      */
     abstract fun chatWithToolsStreaming(
         systemPrompt: String,
         inputItems: List<ResponseInputItem>,
         tools: List<FunctionTool>,
-        model: String = DEFAULT_MODEL
+        modelId: String = DEFAULT_MODEL
     ): Flow<LLMStreamEvent>
     
     /**

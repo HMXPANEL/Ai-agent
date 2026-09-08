@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicReference
  * responses from `chatgpt.com/backend-api/codex/responses`.
  */
 class CodexResponseClient(
+    entry: ModelEntry,
     private val headerSupplier: suspend () -> CodexHeaders
 ) : LLMClient() {
 
@@ -38,6 +39,7 @@ class CodexResponseClient(
     }
 
     private val httpClient: OkHttpClient = buildHttpClient()
+    private val modelId: String = entry.modelId
 
     // ── Non-streaming ────────────────────────────────────────────────────
 
@@ -45,7 +47,7 @@ class CodexResponseClient(
         systemPrompt: String,
         inputItems: List<ResponseInputItem>,
         tools: List<FunctionTool>,
-        model: String,
+        modelId: String = DEFAULT_MODEL,
         maxOutputTokens: Long?,
     ): ResponsesResult = withContext(Dispatchers.IO) {
         // Codex backend forbids `max_output_tokens` (see CodexRequestBuilder).
@@ -54,7 +56,7 @@ class CodexResponseClient(
         LlmLogger.logInput(TAG, systemPrompt, inputItems, tools)
 
         CloudLlmRetry.executeWithRetry(tag = TAG, operationName = "codex chatWithTools") {
-            val body = CodexRequestBuilder.buildRequestBody(systemPrompt, inputItems, tools, model)
+            val body = CodexRequestBuilder.buildRequestBody(systemPrompt, inputItems, tools, this.modelId)
             val request = buildRequest(body, headerSupplier())
 
             httpClient.newCall(request).execute().use { response ->
@@ -133,7 +135,7 @@ class CodexResponseClient(
         systemPrompt: String,
         inputItems: List<ResponseInputItem>,
         tools: List<FunctionTool>,
-        model: String
+        modelId: String = DEFAULT_MODEL
     ): Flow<LLMStreamEvent> = callbackFlow {
         Log.d(TAG, "Starting Codex streaming chat with ${inputItems.size} input items")
         LlmLogger.logInput(TAG, systemPrompt, inputItems, tools)
@@ -145,7 +147,7 @@ class CodexResponseClient(
                 tag = TAG,
                 emitToFlow = { event -> trySend(event) }
             ) { attempt, emitter ->
-                val body = CodexRequestBuilder.buildRequestBody(systemPrompt, inputItems, tools, model)
+                val body = CodexRequestBuilder.buildRequestBody(systemPrompt, inputItems, tools, this.modelId)
                 val request = buildRequest(body, headerSupplier())
 
                 withContext(Dispatchers.IO) {

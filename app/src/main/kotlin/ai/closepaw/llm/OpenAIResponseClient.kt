@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicReference
  * This is the cloud-based implementation that connects to OpenAI's API.
  */
 class OpenAIResponseClient(
+    entry: ModelEntry,
     apiKey: String,
     baseUrl: String? = null
 ) : LLMClient() {
@@ -36,10 +37,11 @@ class OpenAIResponseClient(
     }
 
     private val client: OpenAIClient
+    private val modelId: String = entry.modelId
 
     init {
         InsecureSslConfig.validateBaseUrl(baseUrl)
-        Log.d(TAG, "Creating OpenAIResponseClient")
+        Log.d(TAG, "Creating OpenAIResponseClient for modelId=$modelId")
         client = OpenAIOkHttpClient.builder()
             .apiKey(apiKey)
             .apply { baseUrl?.let { baseUrl(it) } }
@@ -48,7 +50,7 @@ class OpenAIResponseClient(
                 InsecureSslConfig.trustManager?.let { trustManager(it) }
             }
             .build()
-        Log.i(TAG, "OpenAIResponseClient created successfully")
+        Log.i(TAG, "OpenAIResponseClient created successfully for modelId=$modelId")
     }
 
     /**
@@ -61,15 +63,16 @@ class OpenAIResponseClient(
         systemPrompt: String,
         inputItems: List<ResponseInputItem>,
         tools: List<FunctionTool>,
-        model: String,
-        maxOutputTokens: Long?,
+        modelId: String = DEFAULT_MODEL,
+        maxOutputTokens: Long? = null,
     ): ResponsesResult {
+        // Use the modelId from the ModelEntry, not the catalog key
         return withContext(Dispatchers.IO) {
             CloudLlmRetry.executeWithRetry(
                     tag = TAG,
                     operationName = "responses chatWithTools"
             ) {
-                executeChatWithTools(systemPrompt, inputItems, tools, model, maxOutputTokens)
+                executeChatWithTools(systemPrompt, inputItems, tools, this.modelId, maxOutputTokens)
             }
         }
     }
@@ -83,7 +86,7 @@ class OpenAIResponseClient(
         systemPrompt: String,
         inputItems: List<ResponseInputItem>,
         tools: List<FunctionTool>,
-        model: String
+        modelId: String = DEFAULT_MODEL
     ): Flow<LLMStreamEvent> = callbackFlow {
         Log.d(TAG, "Starting native streaming chat with ${inputItems.size} input items")
         LlmLogger.logInput(TAG, systemPrompt, inputItems, tools)
@@ -102,7 +105,7 @@ class OpenAIResponseClient(
                     val textAccumulator = if (verbose) StringBuilder() else null
                     val toolCalls = if (verbose) mutableListOf<LLMToolCall>() else null
 
-                    val params = buildResponseParams(systemPrompt, inputItems, tools, model)
+                    val params = buildResponseParams(systemPrompt, inputItems, tools, modelId)
                     Log.d(TAG, "Making streaming Responses API call to OpenAI (attempt $attempt)...")
 
                     withContext(Dispatchers.IO) {
@@ -191,14 +194,14 @@ class OpenAIResponseClient(
         systemPrompt: String,
         inputItems: List<ResponseInputItem>,
         tools: List<FunctionTool>,
-        model: String,
+        modelId: String,
         maxOutputTokens: Long?,
     ): ResponsesResult {
         Log.d(TAG, "Calling Responses API with ${inputItems.size} input items, ${tools.size} tools")
         LlmLogger.logInput(TAG, systemPrompt, inputItems, tools)
 
         try {
-            val params = buildResponseParams(systemPrompt, inputItems, tools, model, maxOutputTokens)
+            val params = buildResponseParams(systemPrompt, inputItems, tools, this.modelId, maxOutputTokens)
 
             Log.d(TAG, "Making Responses API call to OpenAI...")
 
@@ -249,11 +252,11 @@ class OpenAIResponseClient(
         systemPrompt: String,
         inputItems: List<ResponseInputItem>,
         tools: List<FunctionTool>,
-        model: String,
+        modelId: String,
         maxOutputTokens: Long? = null,
     ): ResponseCreateParams {
         val builder = ResponseCreateParams.builder()
-            .model(ChatModel.of(model))
+            .model(ChatModel.of(modelId))
             .instructions(systemPrompt)
             .input(ResponseCreateParams.Input.ofResponse(inputItems))
 
