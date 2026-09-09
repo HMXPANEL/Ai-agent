@@ -4,6 +4,7 @@ import ai.closepaw.auth.AuthStore
 import ai.closepaw.auth.CodexHeaders
 import ai.closepaw.auth.MissingCredential
 import com.google.common.truth.Truth.assertThat
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
@@ -78,7 +79,7 @@ class ProviderRoutingTest {
         val store = mockk<AuthStore>(relaxed = true)
         every { store.generation(any()) } returns 0L
         every { store.requireApiKey(any()) } returns "test-key"
-        every { store.codexHeaders(any()) } returns
+        coEvery { store.codexHeaders(any()) } returns
             CodexHeaders(
                 accessToken = "acc-token",
                 chatgptAccountId = "acct-test",
