@@ -288,6 +288,13 @@ class ModelCatalogRepository(
         /** Stable catalog key for the synthesized OTHER entry. */
         const val OTHER_CUSTOM_NAME = "other-custom"
 
+        /**
+         * Prefix for discovered OTHER entries (`other:<model-id>`). A selection
+         * with this prefix is OTHER-flavored even when it has fallen out of
+         * the visible catalog (e.g. base URL changed after refresh).
+         */
+        const val OTHER_DISCOVERED_PREFIX = "other:"
+
         private const val FALLBACK_CATALOG_JSON =
             """
             {

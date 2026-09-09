@@ -76,6 +76,7 @@ class LLMClientFactory(
                     }
                 }
                 val built = build(entry)
+                checkClientMatchesEntry(entry, built)
                 Log.d(
                         TAG,
                         "Created ${built.javaClass.simpleName} for model '$modelName' " +
@@ -132,5 +133,31 @@ private fun build(entry: ModelEntry): LLMClient {
         Log.d(TAG, "Cleaning up ${clientCache.size} cached clients")
         clientCache.values.forEach { it.client.cleanup() }
         clientCache.clear()
+    }
+}
+
+/**
+ * Provider-routing tripwire: the client built for [entry] must implement the
+ * provider/api the entry declares. Correct by construction today — this exists
+ * so any future factory path that bypasses the mapping fails loudly instead
+ * of silently sending traffic to the wrong backend.
+ *
+ * @throws IllegalStateException on mismatch.
+ */
+internal fun checkClientMatchesEntry(entry: ModelEntry, client: LLMClient) {
+    val ok = when (entry.provider) {
+        LLMProvider.OPENAI_API ->
+            client is OpenAIResponseClient ||
+                (entry.api == ApiType.CHAT && client is ChatCompletionClient)
+        LLMProvider.OPENAI_CODEX -> client is CodexResponseClient
+        LLMProvider.OPENROUTER, LLMProvider.OTHER -> client is ChatCompletionClient
+        LLMProvider.LOCAL_LFM -> client is LFMLLMClient
+    }
+    if (!ok) {
+        throw IllegalStateException(
+            "Routing invariant violated: model '${entry.name}' " +
+                "(provider=${entry.provider}, api=${entry.api}) built " +
+                "${client.javaClass.simpleName}; refusing to misroute."
+        )
     }
 }

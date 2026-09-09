@@ -1,5 +1,6 @@
 package ai.closepaw.protocol
 
+import ai.closepaw.llm.LLMProvider
 import ai.closepaw.llm.LocalLLMConfig
 import ai.closepaw.perception.PerceptionConfig
 
@@ -35,6 +36,13 @@ data class SessionConfig(
          * Subagents inherit this model — there is no separate subagent model.
          */
         val mainModel: String = "glm-5",
+        /**
+         * UI-selected provider the session must route through. The bootstrap
+         * resolves [mainModel] to a catalog entry and FAILS FAST when the
+         * entry's provider disagrees — providers are never silently switched.
+         * Null skips the check (resumed checkpoints, debug runners).
+         */
+        val provider: LLMProvider? = null,
         /** Platform mode: real screen (accessibility) or virtual display (Shizuku) */
         val platformMode: PlatformMode = PlatformMode.ACCESSIBILITY,
         /** Tool names to exclude from the agent's allowed tool set (e.g. for eval) */

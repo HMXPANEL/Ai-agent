@@ -95,7 +95,8 @@ class OnboardingDemoController(
                     ),
                     perceptionConfig = PerceptionConfig.AccessibilityOnly,
                     platformMode = PlatformMode.ACCESSIBILITY,
-                    mainModel = settingsState.selectedModel
+                    mainModel = settingsState.selectedModel,
+                    provider = settingsState.selectedProvider
                 )
 
                 val visualizer = service.getActionVisualizer()

@@ -35,7 +35,8 @@ class CodexResponseClient(
 
     companion object {
         private const val TAG = "CodexResponseClient"
-        private const val CODEX_URL = "https://chatgpt.com/backend-api/codex/responses"
+        /** Log-routing use only — never receives keys (auth goes in headers). */
+        internal const val CODEX_URL = "https://chatgpt.com/backend-api/codex/responses"
     }
 
     private val httpClient: OkHttpClient = buildHttpClient()

@@ -70,7 +70,7 @@ internal fun findMissingCloudKeys(
     return listOf(MissingCredentialTarget(provider, "${entry.displayName}: $label"))
 }
 
-private const val DISCOVERED_OTHER_PREFIX = "other:"
+private const val DISCOVERED_OTHER_PREFIX = ModelCatalogRepository.OTHER_DISCOVERED_PREFIX
 
 private fun findOtherMissing(
     settingsState: AppSettingsState,

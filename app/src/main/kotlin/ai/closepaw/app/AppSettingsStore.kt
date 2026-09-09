@@ -1,6 +1,7 @@
 package ai.closepaw.app
 
 import android.content.Context
+import ai.closepaw.llm.LLMProvider
 import ai.closepaw.protocol.ApprovalMode
 import ai.closepaw.protocol.AppTier
 import ai.closepaw.protocol.LLMBackendType
@@ -32,6 +33,12 @@ data class AppSettings(
         val otherModelId: String,
         val approvalMode: ApprovalMode,
         val diagnosticsEnabled: Boolean = false,
+        /**
+         * Explicitly selected provider, or null if never chosen (migrated installs).
+         * Kept coherent with [selectedModel] by `AppSettingsState`: the session
+         * bootstrap refuses to silently route when the two disagree.
+         */
+        val selectedProvider: LLMProvider? = null,
 )
 
 class AppSettingsStore(private val context: Context) {
@@ -55,6 +62,7 @@ class AppSettingsStore(private val context: Context) {
         private const val KEY_DISABLED_AGENT_SKILLS = "disabled_agent_skills"
         private const val KEY_APPROVAL_MODE = "approval_mode"
         private const val KEY_DIAGNOSTICS_ENABLED = "diagnostics_enabled"
+        private const val KEY_PROVIDER = "provider"
 
         const val DEFAULT_MODEL = "glm-5"
         const val DEFAULT_DEBUG_MODE = false
@@ -135,6 +143,12 @@ class AppSettingsStore(private val context: Context) {
         } catch (_: Exception) {
             DEFAULT_APPROVAL_MODE
         }
+        // Unknown/missing values (fresh or migrated installs) stay null so the
+        // state layer can derive the provider from the selected model instead
+        // of pinning a stale explicit choice.
+        val selectedProvider = prefs.getString(KEY_PROVIDER, null)?.let { raw ->
+            runCatching { LLMProvider.valueOf(raw) }.getOrNull()
+        }
 
         return AppSettings(
                 selectedModel = selectedModel,
@@ -151,6 +165,7 @@ class AppSettingsStore(private val context: Context) {
                 otherModelId = otherModelId,
                 approvalMode = approvalMode,
                 diagnosticsEnabled = diagnosticsEnabled,
+                selectedProvider = selectedProvider,
         )
     }
 
@@ -176,6 +191,13 @@ class AppSettingsStore(private val context: Context) {
 
     fun saveModel(value: String) {
         prefs().edit().putString(KEY_MODEL, value).apply()
+    }
+
+    /** Persist an explicit provider choice; null clears it back to model-derived. */
+    fun saveProvider(value: LLMProvider?) {
+        prefs().edit().apply {
+            if (value == null) remove(KEY_PROVIDER) else putString(KEY_PROVIDER, value.name)
+        }.apply()
     }
 
     fun saveDebugMode(value: Boolean) {

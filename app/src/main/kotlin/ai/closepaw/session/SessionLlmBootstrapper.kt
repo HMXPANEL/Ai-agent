@@ -9,6 +9,7 @@ import ai.closepaw.llm.LFMLLMClient
 import ai.closepaw.llm.LLMClient
 import ai.closepaw.llm.LLMClientFactory
 import ai.closepaw.llm.LLMProvider
+import ai.closepaw.llm.CodexResponseClient
 import ai.closepaw.llm.LocalLLMConfig
 import ai.closepaw.llm.ModelCatalog
 import ai.closepaw.llm.ModelCatalogRepository
@@ -53,11 +54,46 @@ internal object SessionLlmBootstrapper {
                 when (backend) {
                     LLMBackendType.OPENAI -> {
                         ensureRequiredCredentials(config, modelCatalog, authStore)
-                        llmClientFactory.create(config.mainModel)
+                        val client = llmClientFactory.create(config.mainModel)
+                        // Fail fast on UI-vs-model provider divergence (e.g. OTHER
+                        // tab shown while a Codex model key is still selected) —
+                        // then emit the canonical routing proof line.
+                        val entry = modelCatalog.resolveOrNull(config.mainModel)
+                        checkProviderRouting(config.provider, entry)
+                        if (entry != null) {
+                            val loggedBaseUrl =
+                                if (entry.provider == LLMProvider.OPENAI_CODEX) {
+                                    CodexResponseClient.CODEX_URL
+                                } else {
+                                    entry.effectiveBaseUrl
+                                }
+                            Log.i(
+                                TAG,
+                                formatRoutingLine(
+                                    provider = entry.provider,
+                                    modelId = entry.modelId,
+                                    client = client,
+                                    api = entry.api,
+                                    baseUrl = loggedBaseUrl
+                                )
+                            )
+                        }
+                        client
                     }
                     LLMBackendType.LOCAL -> {
                         val localConfig = config.llm.localConfig ?: LocalLLMConfig()
-                        LFMLLMClient(context, localConfig)
+                        LFMLLMClient(context, localConfig).also { client ->
+                            Log.i(
+                                TAG,
+                                formatRoutingLine(
+                                    provider = LLMProvider.LOCAL_LFM,
+                                    modelId = localConfig.modelSlug,
+                                    client = client,
+                                    api = null,
+                                    baseUrl = null
+                                )
+                            )
+                        }
                     }
                 }
 
