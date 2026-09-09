@@ -1,13 +1,13 @@
 package ai.closepaw.session
 
 import ai.closepaw.llm.ApiType
-import ai.closepaw.llm.FunctionTool
 import ai.closepaw.llm.LLMClient
 import ai.closepaw.llm.LLMProvider
 import ai.closepaw.llm.LLMStreamEvent
 import ai.closepaw.llm.ModelEntry
 import ai.closepaw.llm.ResponsesResult
 import com.google.common.truth.Truth.assertThat
+import com.openai.models.responses.FunctionTool
 import com.openai.models.responses.ResponseInputItem
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow

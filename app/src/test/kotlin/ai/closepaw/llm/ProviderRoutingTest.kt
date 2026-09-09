@@ -1,5 +1,6 @@
 package ai.closepaw.llm
 
+import ai.closepaw.auth.AuthStore
 import ai.closepaw.auth.CodexHeaders
 import ai.closepaw.auth.MissingCredential
 import com.google.common.truth.Truth.assertThat
