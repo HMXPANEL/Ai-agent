@@ -40,7 +40,13 @@ class Turn(
         private val allowedToolNames: Set<String>? = null,
         private val compactor: Compactor? = null,
         private val historyManager: HistoryManager? = null,
-        private val currentGoal: (() -> String)? = null
+        private val currentGoal: (() -> String)? = null,
+        /**
+         * Capability gate (P10). When present, tools whose required capabilities
+         * are not currently AVAILABLE are withheld from the LLM. Null preserves
+         * legacy behavior (allowlist only). UNKNOWN denies by default.
+         */
+        private val capabilityManager: ai.closepaw.tool.CapabilityManager? = null
 ) {
     companion object {
         private const val TAG = "Turn"
@@ -274,9 +280,19 @@ class Turn(
             inputItems: List<ResponseInputItem>,
             model: String
     ): TurnRequest {
+        val manager = capabilityManager
+        val available = if (manager == null) {
+            null
+        } else {
+            toolRegistry.getAvailable(manager).map { it.name }.toSet()
+        }
+        if (manager != null) {
+            Log.d(TAG, "Capability filter: ${available?.size} tools available to LLM")
+        }
         val tools =
                 toolRegistry.generateResponsesApiTools { spec ->
-                    allowedToolNames?.contains(spec.name) != false
+                    allowedToolNames?.contains(spec.name) != false &&
+                        (available == null || spec.name in available)
                 }
         return TurnRequest(inputItems = inputItems, tools = tools, model = model)
     }

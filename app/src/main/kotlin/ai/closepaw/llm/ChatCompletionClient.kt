@@ -132,8 +132,11 @@ class ChatCompletionClient(
                 ) { attempt, emitter ->
                 val verbose = LlmLogger.isVerboseEnabled
                 val textAccumulator = if (verbose) StringBuilder() else null
-                // Map: tool call index → (callId, name, argsBuilder)
-                val toolCallBuilders = mutableMapOf<Long, Triple<String, String, StringBuilder>>()
+                // Correlates streamed tool-call fragments. Indexed deltas key by
+                // index; index-less deltas (some OpenAI-compatible providers omit
+                // `index`) correlate by occurrence order so parallel calls stay
+                // distinct instead of merging into one bucket.
+                val toolCallAccumulator = ToolCallDeltaAccumulator()
                 val completedToolCalls = if (verbose) mutableListOf<LLMToolCall>() else null
                 var responseId: String? = null
                 var sawFinishReason = false
@@ -165,47 +168,25 @@ class ChatCompletionClient(
 
                                 // Tool call deltas (streamed incrementally)
                                 delta.toolCalls().ifPresent { calls ->
+                                    var unindexedOrdinal = 0
                                     for (tcDelta in calls) {
-                                        // Safely get index - some OpenAI-compatible providers (e.g., Gemini)
-                                        // omit the index field, which throws OpenAIInvalidDataException.
-                                        // Default to 0 when missing, which works for single tool calls.
-                                        val idx: Long = try {
+                                        // Some OpenAI-compatible providers (e.g., Gemini)
+                                        // omit the index field, which throws
+                                        // OpenAIInvalidDataException on access.
+                                        val idx: Long? = try {
                                             tcDelta.index()
                                         } catch (e: Exception) {
-                                            0L
+                                            null
                                         }
-
-                                        if (!toolCallBuilders.containsKey(idx)) {
-                                            toolCallBuilders[idx] =
-                                                Triple(
-                                                    tcDelta.id().orElse("call_$idx"),
-                                                    tcDelta.function().orElse(null)?.name()?.orElse("")
-                                                        ?: "",
-                                                    StringBuilder()
-                                                )
-                                        } else {
-                                            // Update id/name if provided in a later delta
-                                            tcDelta.id().ifPresent { id ->
-                                                val (curId, name, args) = toolCallBuilders[idx]!!
-                                                if (curId.startsWith("call_")) {
-                                                    toolCallBuilders[idx] = Triple(id, name, args)
-                                                }
-                                            }
-                                            tcDelta.function().orElse(null)?.name()?.ifPresent { name ->
-                                                val (curId, curName, args) = toolCallBuilders[idx]!!
-                                                if (curName.isEmpty()) {
-                                                    toolCallBuilders[idx] = Triple(curId, name, args)
-                                                }
-                                            }
-                                        }
-
-                                        tcDelta.function().ifPresent { func ->
-                                            func.arguments().ifPresent { argFragment ->
-                                                toolCallBuilders[idx]?.let { (_, _, argsBuilder) ->
-                                                    argsBuilder.append(argFragment)
-                                                }
-                                            }
-                                        }
+                                        val ordinal = if (idx == null) unindexedOrdinal++ else 0
+                                        toolCallAccumulator.onDelta(
+                                            index = idx,
+                                            id = tcDelta.id().orElse(null),
+                                            name = tcDelta.function().orElse(null)?.name()?.orElse(null),
+                                            argsFragment = tcDelta.function().orElse(null)
+                                                ?.arguments()?.orElse(null),
+                                            chunkOrdinal = ordinal
+                                        )
                                     }
                                 }
 
@@ -214,18 +195,10 @@ class ChatCompletionClient(
                                     when (reason.toString()) {
                                         "stop", "tool_calls" -> {
                                             sawFinishReason = true
-                                            for ((_, builder) in toolCallBuilders) {
-                                                val (callId, name, args) = builder
-                                                val toolCall =
-                                                    LLMToolCall(
-                                                        callId = callId,
-                                                        name = name,
-                                                        arguments = args.toString()
-                                                    )
+                                            for (toolCall in toolCallAccumulator.drain()) {
                                                 completedToolCalls?.add(toolCall)
                                                 emitter.emit(LLMStreamEvent.ToolCallDone(toolCall))
                                             }
-                                            toolCallBuilders.clear()
                                         }
                                         "length" -> {
                                             throw TransientException("Response truncated (finish_reason=length)")

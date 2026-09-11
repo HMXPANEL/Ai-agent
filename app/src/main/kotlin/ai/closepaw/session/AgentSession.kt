@@ -122,6 +122,13 @@ private constructor(
          * and resumes the UI recording service. Returns a session in [SessionState.Created]
          * state — the first [Op.UserInput] triggers platform start as usual.
          *
+         * Provider/model policy (P9): conversation HISTORY always comes from the
+         * snapshot, but the runtime provider/model follow the CURRENT global
+         * selection when overrides are supplied. A chat created under Codex and
+         * reopened after switching to OTHER therefore runs OTHER — history is
+         * provider-agnostic prompt items, so nothing is lost. Null overrides
+         * preserve legacy behavior (snapshot values win).
+         *
          * @return the reloaded session, or null if the snapshot is invalid.
          */
         fun reload(
@@ -132,6 +139,10 @@ private constructor(
                 baseUrlOverrides: Map<ai.closepaw.llm.LLMProvider, String> = emptyMap(),
                 visualizer: ActionVisualizerManager? = null,
                 overlayTouchGate: OverlayTouchGate? = null,
+                overrideModel: String? = null,
+                overrideProvider: ai.closepaw.llm.LLMProvider? = null,
+                overrideBackend: ai.closepaw.protocol.LLMBackendType? = null,
+                overrideLocalConfig: ai.closepaw.llm.LocalLLMConfig? = null,
         ): AgentSession? {
             if (snapshot.schemaVersion != 2) {
                 Log.w(TAG, "Session from previous version — start a new session. (schema=${snapshot.schemaVersion})")
@@ -146,12 +157,29 @@ private constructor(
             }
 
             val config = snapshot.config.toSessionConfig()
+            // P9: follow the current global selection when the caller supplies it.
+            // History/todos/scratchpad below still come from the snapshot.
+            val effectiveConfig = if (overrideModel != null || overrideProvider != null ||
+                overrideBackend != null || overrideLocalConfig != null
+            ) {
+                config.copy(
+                    mainModel = overrideModel ?: config.mainModel,
+                    provider = overrideProvider ?: config.provider,
+                    llm = ai.closepaw.protocol.SessionLlmConfig(
+                        backendType = overrideBackend ?: config.llm.backendType,
+                        localConfig = overrideLocalConfig ?: config.llm.localConfig
+                    )
+                )
+            } else {
+                config
+            }
+            logChatRestore(snapshot, effectiveConfig, service)
             val sessionId = SessionId(snapshot.sessionId)
-            val traceRecorder = TraceRecorderFactory.create(service, config, sessionId)
+            val traceRecorder = TraceRecorderFactory.create(service, effectiveConfig, sessionId)
             val appClassifier = AppClassifierHolder.get(service.applicationContext)
             val platform: AndroidPlatform =
                     PlatformFactory.create(
-                            config = config,
+                            config = effectiveConfig,
                             service = service,
                             visualizer = visualizer,
                             traceRecorder = traceRecorder,
@@ -160,7 +188,7 @@ private constructor(
                     )
             val services =
                     SessionServices.create(
-                            config = config,
+                            config = effectiveConfig,
                             platform = platform,
                             authStore = authStore,
                             baseUrlOverrides = baseUrlOverrides,
@@ -216,10 +244,37 @@ private constructor(
 
             return AgentSession(
                     sessionId = sessionId,
-                    config = config,
+                    config = effectiveConfig,
                     service = service,
                     scope = scope,
                     services = services
+            )
+        }
+
+        /**
+         * ChatRestore diagnostic (P9). Names saved-vs-resolved provider/model so a
+         * restored chat can never silently run a different backend than expected.
+         * Names only — never secrets.
+         */
+        private fun logChatRestore(
+                snapshot: ai.closepaw.history.model.SessionRuntimeSnapshot,
+                effectiveConfig: ai.closepaw.protocol.SessionConfig,
+                service: AccessibilityService
+        ) {
+            val savedModel = snapshot.config.mainModel
+            val savedProvider = snapshot.config.provider
+                ?: runCatching {
+                    ai.closepaw.llm.ModelCatalogRepositoryHolder.get(service)
+                        .catalog.value.resolveOrNull(savedModel)?.provider?.name
+                }.getOrNull()
+            Log.i(
+                    TAG,
+                    "ChatRestore: chatId=${snapshot.sessionId} " +
+                            "savedProvider=${savedProvider ?: "<unknown>"} " +
+                            "savedModel=$savedModel " +
+                            "resolvedProvider=${effectiveConfig.provider?.name ?: "<guard-skipped>"} " +
+                            "resolvedModel=${effectiveConfig.mainModel} " +
+                            "backend=${effectiveConfig.llm.backendType}"
             )
         }
     }

@@ -2,6 +2,7 @@ package ai.closepaw.agent
 
 import android.util.Log
 import ai.closepaw.history.ResponseItem
+import ai.closepaw.history.MessageKind
 import ai.closepaw.model.ScreenSnapshot
 import ai.closepaw.perception.Perceptor
 import ai.closepaw.protocol.*
@@ -53,6 +54,7 @@ internal class TurnExecutionPhaseRunner(
                 )
 
                 val executedToolIds = mutableSetOf<String>()
+                val executedTools = mutableListOf<ExecutedTool>()
                 var terminatedEarly = false
                 var lastTerminalResult: ToolCallResult? = null
                 for (toolCall in toolCallsToExecute) {
@@ -65,16 +67,103 @@ internal class TurnExecutionPhaseRunner(
                         currentSnapshot = result.snapshot
                         executedToolIds += toolCall.id
                         lastTerminalResult = result.toolResult
+                        executedTools += ExecutedTool(
+                                name = toolCall.name,
+                                output = when (val r = result.toolResult) {
+                                        is ToolCallResult.Success -> r.output
+                                        is ToolCallResult.Error -> "Error: ${r.error}"
+                                        is ToolCallResult.Cancelled -> "Cancelled: ${r.reason}"
+                                },
+                                failed = result.toolResult !is ToolCallResult.Success
+                        )
                         if (result.toolResult !is ToolCallResult.Success) {
                                 Log.w(TAG, "Action ${toolCall.name} did not succeed; aborting remaining actions in this turn")
                                 terminatedEarly = true
                                 break
                         }
                 }
+                val verification = verifyTurnOutcome(
+                        turnId = turnId,
+                        executedTools = executedTools,
+                        snapshot = currentSnapshot
+                )
                 return ExecutionPhaseResult(
                         executedToolIds = executedToolIds,
                         terminatedEarly = terminatedEarly,
-                        lastTerminalResult = lastTerminalResult
+                        lastTerminalResult = lastTerminalResult,
+                        executedTools = executedTools,
+                        verification = verification
+                )
+        }
+
+        /**
+         * Automatic outcome verification (P3/P5/P15). Runs the tool-flag policy
+         * plus structured-task criteria checks against the fresh post-execution
+         * snapshot, records VERIFY lines to history (so the model sees them),
+         * and emits diagnostics. Never throws — verification failure is data.
+         */
+        private suspend fun verifyTurnOutcome(
+                turnId: String,
+                executedTools: List<ExecutedTool>,
+                snapshot: ScreenSnapshot
+        ): TurnVerificationResult {
+                val names = executedTools.map { it.name }
+                val outputs = executedTools.map { it.output }
+                val failed = executedTools.any { it.failed }
+                val result = runCatching {
+                        OutcomeVerifier.verifyTurn(
+                                task = config.structuredTask,
+                                executedToolNames = names,
+                                outputs = outputs,
+                                hasFailure = failed,
+                                platform = services.platform,
+                                snapshot = snapshot
+                        )
+                }.getOrElse { e ->
+                        Log.w(TAG, "Outcome verification crashed; treating as unverified", e)
+                        TurnVerificationResult(
+                                assessment = TaskVerification.assess(names, outputs, failed),
+                                details = listOf("VERIFY: checker error (${e.message}) — treated as not verified")
+                        )
+                }
+                // Surface to the agent loop: VERIFY lines become user-role context.
+                if (result.details.isNotEmpty() &&
+                        result.assessment != TaskVerification.Assessment.NOT_REQUIRED
+                ) {
+                        services.historyManager.addItem(
+                                ResponseItem.Message(
+                                        kind = MessageKind.SCREEN_OBSERVATION,
+                                        content = "Outcome verification:\n" +
+                                                result.details.joinToString("\n")
+                                )
+                        )
+                }
+                emitVerificationDiagnostics(turnId, result)
+                return result
+        }
+
+        private fun emitVerificationDiagnostics(
+                turnId: String,
+                result: TurnVerificationResult
+        ) {
+                // Provider/model attached so device runs can be filtered by backend.
+                services.runtimeEventBus.emit(
+                        ai.closepaw.trace.RuntimeEvent(
+                                type = when (result.assessment) {
+                                        TaskVerification.Assessment.REQUIRED_AND_VERIFIED,
+                                        TaskVerification.Assessment.NOT_REQUIRED ->
+                                                ai.closepaw.trace.TaskDiagnostics.VERIFICATION_PASSED
+                                        TaskVerification.Assessment.REQUIRED_BUT_UNVERIFIED ->
+                                                ai.closepaw.trace.TaskDiagnostics.VERIFICATION_FAILED
+                                },
+                                sessionId = config.sessionId.value,
+                                taskId = config.taskId,
+                                action = "turn:$turnId",
+                                provider = services.config.provider?.name,
+                                model = services.config.mainModel,
+                                verification = TaskVerification.toOutcomeState(result.assessment).name,
+                                result = result.details.joinToString("; ").take(200)
+                        )
                 )
         }
 
@@ -173,6 +262,23 @@ internal class TurnExecutionPhaseRunner(
                         ActionOutcome.SKIPPED -> "⊘ ${toolCall.name} skipped"
                 }
                 eventDispatcher.status(statusSymbol)
+                if (toolResult is ToolCallResult.Success) {
+                        ai.closepaw.trace.TaskDiagnostics.actionExecuted(
+                                bus = services.runtimeEventBus,
+                                sessionId = config.sessionId.value,
+                                taskId = config.taskId,
+                                toolName = toolCall.name,
+                                message = statusSymbol
+                        )
+                } else {
+                        ai.closepaw.trace.TaskDiagnostics.actionFailed(
+                                bus = services.runtimeEventBus,
+                                sessionId = config.sessionId.value,
+                                taskId = config.taskId,
+                                toolName = toolCall.name,
+                                reason = toolResult.toContextString().take(200)
+                        )
+                }
                 return SingleToolCallResult(
                         snapshot = snapshotForNextTool,
                         toolResult = toolResult

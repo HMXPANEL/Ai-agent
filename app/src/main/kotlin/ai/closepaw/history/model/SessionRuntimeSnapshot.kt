@@ -69,7 +69,14 @@ data class ConversationConfigSnapshot(
     val debugMode: Boolean = false,
     val traceEnabled: Boolean = false,
     val traceRunId: String? = null,
-    val excludedTools: List<String> = emptyList()
+    val excludedTools: List<String> = emptyList(),
+    /**
+     * UI-selected provider name at checkpoint time (P9). Null on legacy snapshots.
+     * Informational: reload follows the CURRENT global selection (see
+     * `AgentSession.reload` overrides); this field exists so the ChatRestore
+     * diagnostic can show saved-vs-resolved side by side.
+     */
+    val provider: String? = null
 )
 
 @Serializable

@@ -62,7 +62,8 @@ internal class TurnPlanningPhaseRunner(
                                 compactor = compactor,
                                 historyManager =
                                         if (compactor != null) services.historyManager else null,
-                                currentGoal = if (compactor != null) ({ config.goal }) else null
+                                currentGoal = if (compactor != null) ({ config.goal }) else null,
+                                capabilityManager = services.capabilityManager
                         )
                 val systemPrompt =
                         requireNotNull(config.systemPrompt) {
@@ -79,8 +80,11 @@ internal class TurnPlanningPhaseRunner(
                 // Catalog (one-liner descriptions) stays in system prompt.
                 // Activated skill BODIES go into user-role messages (lower priority).
                 val catalogSection = services.agentSkillManager.catalogPrompt()
+                val selfLine = selfStateLine(currentPackageName, snapshot)
                 val fullSystemPrompt = buildString {
                         append(systemPrompt)
+                        append("\n\n")
+                        append(selfLine)
                         if (catalogSection != null) {
                                 append("\n\n")
                                 append(catalogSection)
@@ -92,7 +96,6 @@ internal class TurnPlanningPhaseRunner(
                         snapshot = snapshot,
                         perceptionConfig = services.config.perceptionConfig
                 )
-
                 val promptBuilder =
                         PromptBuilder(
                                 historyManager = services.historyManager,
@@ -205,6 +208,30 @@ internal class TurnPlanningPhaseRunner(
                 emitAgentThought(arbitration.selectedToolCalls, turnNumber)
 
                 return PlanningPhaseOutput(turnResult = result, arbitration = arbitration)
+        }
+
+        private fun selfStateLine(
+                currentPackageName: String?,
+                snapshot: ai.closepaw.model.ScreenSnapshot
+        ): String {
+                // P14: one compact self-state line from existing sources of truth
+                // (session config + capability snapshot + fresh capture). Lets the
+                // model answer "which model are you using?" from context instead of
+                // guessing, at negligible token cost.
+                val caps = runCatching { services.capabilityManager.snapshot() }
+                        .getOrDefault(emptyMap())
+                val state = HmxSelfState(
+                        provider = services.config.provider?.name,
+                        model = services.config.mainModel,
+                        backend = services.config.llm.backendType.name,
+                        otherConfigured = false,
+                        sessionId = null,
+                        taskSummary = config.goal.take(80),
+                        screen = snapshot.summarize(currentPackageName),
+                        capabilities = caps.mapKeys { it.key.name }
+                                .mapValues { it.value.name },
+                )
+                return state.promptLine()
         }
 
         private fun buildAppSkillMessage(currentPackageName: String?): String? {

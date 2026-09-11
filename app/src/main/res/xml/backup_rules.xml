@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Auto Backup rules (P1 chat persistence).
+  INCLUDE: chat history (files/sessions) + non-secret settings (agent_prefs).
+  EXCLUDE: authentication secrets (auth_store), caches, reinstallable skills,
+  diagnostics, and traces. Backups therefore restore conversations and model/
+  provider selection after reinstall without ever carrying credentials.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="file" path="sessions/" />
+        <include domain="sharedpref" path="agent_prefs.xml" />
+        <exclude domain="sharedpref" path="auth_store.xml" />
+        <exclude domain="file" path="skills/" />
+        <exclude domain="file" path="diagnostics/" />
+        <exclude domain="database" path="." />
+        <exclude domain="cache" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="file" path="sessions/" />
+        <include domain="sharedpref" path="agent_prefs.xml" />
+        <exclude domain="sharedpref" path="auth_store.xml" />
+        <exclude domain="file" path="skills/" />
+        <exclude domain="file" path="diagnostics/" />
+        <exclude domain="database" path="." />
+        <exclude domain="cache" path="." />
+    </device-transfer>
+</data-extraction-rules>

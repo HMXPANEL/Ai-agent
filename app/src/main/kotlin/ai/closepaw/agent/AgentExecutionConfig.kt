@@ -68,6 +68,13 @@ data class AgentExecutionConfig(
     val modelName: String = "gpt-5.2",
 
     /**
+     * Structured task understanding parsed from the goal (P4). Assists planning,
+     * target resolution, and outcome verification; the LLM still reasons freely.
+     * Null = unstructured goal (legacy/tests).
+     */
+    val structuredTask: StructuredTask? = null,
+
+    /**
      * Eval-only safety net. When non-null, the agent loop stops with
      * [AgentStopReason.Error] once `turnCount >= evalTurnBudget`. Production
      * leaves this null — the production stop condition is auto-compaction

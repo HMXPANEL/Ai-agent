@@ -193,6 +193,30 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
         val sessionStorage = SessionStorage(applicationContext)
         sessionHistoryManager = SessionHistoryManager.create(sessionStorage, sessionScope)
+        // P1 reinstall recovery: adopt the shared-storage backup ONLY when the
+        // live store is empty (fresh install). Never deletes or overwrites.
+        sessionScope.launch {
+            runCatching {
+                val persistence = ai.closepaw.history.ChatPersistenceManager(
+                    sessionStorage,
+                    AppSettingsStore(applicationContext)
+                )
+                persistence.restoreIfEmpty(
+                    ai.closepaw.history.BackupMediaMirror(applicationContext)
+                )
+            }.onSuccess { report ->
+                if (report != null) {
+                    Log.i(
+                        TAG,
+                        "Auto-restored chats from backup: written=${report.written} " +
+                            "adopted=${report.adopted.size} keptLive=${report.keptLive.size} " +
+                            "rolledBack=${report.rolledBack}"
+                    )
+                }
+            }.onFailure { e ->
+                Log.w(TAG, "Backup auto-restore check failed (non-fatal)", e)
+            }
+        }
         viewModel =
                 ChatViewModel(
                         sessionProvider = { coordinator.currentSession },
@@ -666,6 +690,17 @@ class MainActivity : ComponentActivity() {
         if (snapshot.schemaVersion != 2) return null
         if (!snapshot.checkpointState.isReloadable()) return null
 
+        // P9: history comes from the snapshot, but the runtime provider/model
+        // follow the CURRENT global selection — a chat saved under Codex and
+        // reopened after switching to OTHER runs OTHER (history is
+        // provider-agnostic). The ChatRestore log line records saved-vs-resolved.
+        val reloadLocalConfig =
+                if (settingsState.llmBackend == LLMBackendType.LOCAL) {
+                    LocalLLMConfig(
+                            modelSlug = settingsState.localModel.modelSlug,
+                            quantizationSlug = settingsState.localModel.quantizationSlug
+                    )
+                } else null
         val session = withContext(Dispatchers.Default) {
             AgentSession.reload(
                     snapshot = snapshot,
@@ -675,6 +710,10 @@ class MainActivity : ComponentActivity() {
                     baseUrlOverrides = baseUrlOverrides,
                     visualizer = visualizer,
                     overlayTouchGate = touchGate,
+                    overrideModel = settingsState.selectedModel,
+                    overrideProvider = settingsState.selectedProvider,
+                    overrideBackend = settingsState.llmBackend,
+                    overrideLocalConfig = reloadLocalConfig,
             )
         }
         if (session == null) return null

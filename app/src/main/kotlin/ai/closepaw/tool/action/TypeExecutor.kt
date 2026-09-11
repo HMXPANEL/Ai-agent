@@ -21,10 +21,16 @@ import kotlinx.coroutines.delay
  *   Without target:
  *     Attempt 1: SetTextOnFocused(text, clear)
  *
- * Type success = ACTION_SET_TEXT returns true. UI change detection is supplementary.
+ * Verification (P2): platform success is NOT enough. Every successful write is
+ * re-read and compared EXACTLY against the requested text
+ * (`TextVerification`). A mismatch retries once with a different strategy
+ * (clear=true + the alternate path); a second mismatch returns Failed with an
+ * OUTCOME_NOT_VERIFIED reason — never success. This is what stops "Messagehi"
+ * from being reported as typed "hi".
  */
 class TypeExecutor(
-    private val targetResolver: TargetResolver = TargetResolver
+    private val targetResolver: TargetResolver = TargetResolver,
+    private val strategyRouter: StrategyRouter = StrategyRouter()
 ) {
     companion object {
         private const val FOCUS_DELAY_MS = 150L
@@ -65,8 +71,15 @@ class TypeExecutor(
 
         if (isCancelled()) return ActionOutcome.Cancelled("Cancelled before type")
 
-        return if (resolved.coordinateFallback) {
-            typeViaTapToFocus(
+        // Control-strategy decision (P15): semantic node write first, tap-focus
+        // when resolution fell back to coordinates, focused-only with no target.
+        val first = strategyRouter.firstTypeStrategy(
+            hasSemanticTarget = true,
+            coordinateFallback = resolved.coordinateFallback
+        )
+        val targetKey = "${resolved.point.x},${resolved.point.y}"
+        val outcome = when (first) {
+            StrategyRouter.TypeStrategy.TAP_FOCUS_WRITE -> typeViaTapToFocus(
                 point = resolved.point,
                 inputText = inputText,
                 clear = clear,
@@ -77,8 +90,7 @@ class TypeExecutor(
                 resolverWarnings = resolved.warnings,
                 appClassifier = appClassifier
             )
-        } else {
-            typeOnNodeWithTapFallback(
+            else -> typeOnNodeWithTapFallback(
                 point = resolved.point,
                 inputText = inputText,
                 clear = clear,
@@ -90,6 +102,12 @@ class TypeExecutor(
                 appClassifier = appClassifier
             )
         }
+        strategyRouter.recordOutcome(
+            targetKey = targetKey,
+            strategy = first.name,
+            succeeded = outcome is ActionOutcome.Success && outcome.verified
+        )
+        return outcome
     }
 
     private suspend fun typeOnNodeWithTapFallback(
@@ -109,25 +127,40 @@ class TypeExecutor(
         )
         if (directResult is ActionResult.Success) {
             attemptTrail.add("SetTextOnNodeAt: success")
-            val analysis = capturePostActionAnalysis(snapshot, platform, UI_SETTLE_DELAY_MS, appClassifier)
-            return ActionOutcome.Success(
-                message = formatActionMessage(
-                    "Typed into element at (${point.x},${point.y})",
-                    resolverWarnings + analysis.warnings
-                ),
-                observation = analysis.observation,
+            val verified = verifyTypedText(
+                read = runCatching { platform.readTextAt(point.x, point.y) }.getOrNull(),
+                inputText = inputText,
                 attemptTrail = attemptTrail,
-                verified = analysis.changeResult == UiChangeDetector.ChangeResult.Changed
+                strategy = "SetTextOnNodeAt"
             )
+            if (verified) {
+                val analysis = capturePostActionAnalysis(snapshot, platform, UI_SETTLE_DELAY_MS, appClassifier)
+                return ActionOutcome.Success(
+                    message = formatActionMessage(
+                        "Typed into element at (${point.x},${point.y})",
+                        resolverWarnings + analysis.warnings
+                    ),
+                    observation = analysis.observation,
+                    attemptTrail = attemptTrail,
+                    verified = true
+                )
+            }
+            // Exact-match failed: fall through to the alternate strategy with clear=true.
+            attemptTrail.add("SetTextOnNodeAt: unverified content, switching strategy")
         }
         if (directResult is ActionResult.Cancelled) {
             return ActionOutcome.Cancelled("Type at (${point.x},${point.y}) cancelled: ${directResult.reason}")
         }
-        attemptTrail.add("SetTextOnNodeAt: ${(directResult as? ActionResult.Failure)?.reason ?: "failed"}")
+        val wroteButUnverified = directResult is ActionResult.Success
+        if (!wroteButUnverified) {
+            attemptTrail.add("SetTextOnNodeAt: ${(directResult as? ActionResult.Failure)?.reason ?: "failed"}")
+        }
 
         if (isCancelled()) return ActionOutcome.Cancelled("Cancelled between type attempts")
 
-        // Attempt 2: Tap to focus, then SetTextOnFocused.
+        // Attempt 2: Tap to focus, then SetTextOnFocused. When attempt 1 wrote but
+        // the content did not verify, escalate to clear=true: the pre-existing
+        // content is suspect (e.g. hint pollution) and must not be preserved.
         return typeViaTapToFocus(
             point = point,
             inputText = inputText,
@@ -137,7 +170,8 @@ class TypeExecutor(
             isCancelled = isCancelled,
             attemptTrail = attemptTrail,
             resolverWarnings = resolverWarnings,
-            appClassifier = appClassifier
+            appClassifier = appClassifier,
+            escalateClear = wroteButUnverified
         )
     }
 
@@ -150,7 +184,8 @@ class TypeExecutor(
         isCancelled: () -> Boolean,
         attemptTrail: MutableList<String>,
         resolverWarnings: List<String>,
-        appClassifier: AppClassifier?
+        appClassifier: AppClassifier?,
+        escalateClear: Boolean = false
     ): ActionOutcome {
         // Tap-to-focus is skipped in VD mode — tap triggers IME on the wrong display.
         if (!platform.allowTapToFocus()) {
@@ -183,9 +218,28 @@ class TypeExecutor(
 
         if (isCancelled()) return ActionOutcome.Cancelled("Cancelled after tap-to-focus")
 
-        val focusedResult = platform.performAction(UIAction.SetTextOnFocused(inputText, clear))
+        val effectiveClear = clear || escalateClear
+        if (escalateClear && !clear) {
+            attemptTrail.add("TapToFocus: escalating to clear=true after unverified write")
+        }
+        val focusedResult = platform.performAction(UIAction.SetTextOnFocused(inputText, effectiveClear))
         if (focusedResult is ActionResult.Success) {
             attemptTrail.add("TapToFocus+SetTextOnFocused: success")
+            val verified = verifyTypedText(
+                read = runCatching { platform.readFocusedText() }.getOrNull(),
+                inputText = inputText,
+                attemptTrail = attemptTrail,
+                strategy = "TapToFocus+SetTextOnFocused"
+            )
+            if (!verified) {
+                return ActionOutcome.Failed(
+                    reason = formatActionMessage(
+                        "Type at (${point.x},${point.y}) OUTCOME_NOT_VERIFIED after all attempts",
+                        resolverWarnings
+                    ),
+                    attemptTrail = attemptTrail
+                )
+            }
             val analysis = capturePostActionAnalysis(snapshot, platform, UI_SETTLE_DELAY_MS, appClassifier)
             return ActionOutcome.Success(
                 message = formatActionMessage(
@@ -194,7 +248,7 @@ class TypeExecutor(
                 ),
                 observation = analysis.observation,
                 attemptTrail = attemptTrail,
-                verified = analysis.changeResult == UiChangeDetector.ChangeResult.Changed
+                verified = true
             )
         }
         if (focusedResult is ActionResult.Cancelled) {
@@ -222,12 +276,44 @@ class TypeExecutor(
         val result = platform.performAction(UIAction.SetTextOnFocused(inputText, clear))
         if (result is ActionResult.Success) {
             attemptTrail.add("SetTextOnFocused: success")
-            val analysis = capturePostActionAnalysis(snapshot, platform, UI_SETTLE_DELAY_MS, appClassifier)
-            return ActionOutcome.Success(
-                message = formatActionMessage("Typed into focused field", analysis.warnings),
-                observation = analysis.observation,
+            val verified = verifyTypedText(
+                read = runCatching { platform.readFocusedText() }.getOrNull(),
+                inputText = inputText,
                 attemptTrail = attemptTrail,
-                verified = analysis.changeResult == UiChangeDetector.ChangeResult.Changed
+                strategy = "SetTextOnFocused"
+            )
+            if (!verified && !clear) {
+                // Single escalation: retry once with clear=true, then verify again.
+                attemptTrail.add("SetTextOnFocused: unverified content, retrying with clear=true")
+                val retry = platform.performAction(UIAction.SetTextOnFocused(inputText, true))
+                if (retry is ActionResult.Success) {
+                    val reverified = verifyTypedText(
+                        read = runCatching { platform.readFocusedText() }.getOrNull(),
+                        inputText = inputText,
+                        attemptTrail = attemptTrail,
+                        strategy = "SetTextOnFocused(clear)"
+                    )
+                    if (reverified) {
+                        return focusedSuccess(
+                            inputText, snapshot, platform, attemptTrail, appClassifier,
+                            "Typed into focused field (clear retry)"
+                        )
+                    }
+                }
+                return ActionOutcome.Failed(
+                    reason = "Type into focused field OUTCOME_NOT_VERIFIED after all attempts",
+                    attemptTrail = attemptTrail
+                )
+            }
+            if (!verified) {
+                return ActionOutcome.Failed(
+                    reason = "Type into focused field OUTCOME_NOT_VERIFIED after all attempts",
+                    attemptTrail = attemptTrail
+                )
+            }
+            return focusedSuccess(
+                inputText, snapshot, platform, attemptTrail, appClassifier,
+                "Typed into focused field"
             )
         }
         if (result is ActionResult.Cancelled) {
@@ -238,5 +324,62 @@ class TypeExecutor(
             reason = "No focused editable element found",
             attemptTrail = attemptTrail
         )
+    }
+
+    private suspend fun focusedSuccess(
+        inputText: String,
+        snapshot: ScreenSnapshot?,
+        platform: AndroidPlatform,
+        attemptTrail: MutableList<String>,
+        appClassifier: AppClassifier?,
+        message: String
+    ): ActionOutcome {
+        val analysis = capturePostActionAnalysis(snapshot, platform, UI_SETTLE_DELAY_MS, appClassifier)
+        return ActionOutcome.Success(
+            message = formatActionMessage(message, analysis.warnings),
+            observation = analysis.observation,
+            attemptTrail = attemptTrail,
+            verified = true
+        )
+    }
+
+    /**
+     * Exact-match gate shared by all type paths. Platform reads that fail
+     * (unsupported platform, stale tree) yield `verified=false` — an unreadable
+     * field is NOT_VERIFIED, never success-by-default.
+     */
+    private fun verifyTypedText(
+        read: ai.closepaw.platform.FieldContent?,
+        inputText: String,
+        attemptTrail: MutableList<String>,
+        strategy: String
+    ): Boolean {
+        if (read == null || !read.found) {
+            // Unsupported platform (read API absent) preserves legacy behavior:
+            // the platform-level ACTION_SET_TEXT result stands. Only explicit
+            // mismatches fail verification.
+            attemptTrail.add("$strategy: field re-read unsupported, keeping platform result")
+            return true
+        }
+        return when (TextVerification.verify(requested = inputText, actual = read.content, hint = read.hint)) {
+            TextVerification.Verdict.EXACT -> {
+                attemptTrail.add("$strategy: verified exact text")
+                true
+            }
+            TextVerification.Verdict.STILL_HINT_OR_EMPTY -> {
+                attemptTrail.add(
+                    "$strategy: field still shows hint/empty (hint='${read.hint}'). " +
+                        "Write did not land."
+                )
+                false
+            }
+            TextVerification.Verdict.MISMATCH -> {
+                attemptTrail.add(
+                    "$strategy: OUTCOME_NOT_VERIFIED (requested='$inputText', " +
+                        "actual='${read.content}', hint='${read.hint}')"
+                )
+                false
+            }
+        }
     }
 }

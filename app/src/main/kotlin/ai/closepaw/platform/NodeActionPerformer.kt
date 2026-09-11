@@ -140,6 +140,50 @@ class NodeActionPerformer(
         }
     }
 
+    /**
+     * Re-read an editable field for write verification (P2). Returns actual
+     * content with hint separated where the platform exposes it. A null content
+     * means "no readable node", never "empty".
+     */
+    suspend fun readEditableTextAt(x: Int, y: Int): FieldContent {
+        return onMain {
+            withRoot { root ->
+                val node = AccessibilityNodeFinder.findNodeAtLocation(root, x, y)
+                        ?: return@withRoot FieldContent.missing()
+                try {
+                    readFieldContent(node)
+                } finally {
+                    if (node !== root) node.recycleCompat()
+                }
+            }
+        }
+    }
+
+    /** Re-read the focused editable field for write verification (P2). */
+    suspend fun readFocusedEditableText(): FieldContent {
+        return onMain {
+            withRoot { root ->
+                val node = AccessibilityNodeFinder.findFocusedEditableNode(root)
+                        ?: return@withRoot FieldContent.missing()
+                try {
+                    readFieldContent(node)
+                } finally {
+                    if (node !== root) node.recycleCompat()
+                }
+            }
+        }
+    }
+
+    private fun readFieldContent(node: AccessibilityNodeInfo): FieldContent {
+        val hint = node.hintText?.toString()?.takeIf { it.isNotEmpty() }
+        val raw = node.text?.toString()
+        // When the platform flags placeholder-as-text, content is empty by definition.
+        // Otherwise return the raw value untouched: hint/content disambiguation for
+        // custom views happens in TextVerification (never silently here).
+        val content = if (node.isShowingHintText) "" else raw
+        return FieldContent(content = content, hint = hint, found = true)
+    }
+
     @Suppress("DEPRECATION")
     suspend fun performEnterKey(): ActionResult {
         return onMain {
@@ -193,9 +237,18 @@ class NodeActionPerformer(
             node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, clearArgs)
             combined = text
         } else {
-            // clear=false: insert text at cursor position, preserving existing content
-            // Hint text check: empty fields display hint text via node.text — treat as empty
-            val existing = if (node.isShowingHintText) "" else (node.text?.toString() ?: "")
+            // clear=false: insert text at cursor position, preserving existing content.
+            // Hint guard: empty fields may expose placeholder via node.text with
+            // isShowingHintText==false on custom views — content equal to the known
+            // hint counts as empty so "Message"+"hi" can never become "Messagehi".
+            val rawExisting = node.text?.toString() ?: ""
+            val hintText = node.hintText?.toString()?.takeIf { it.isNotEmpty() }
+            val existing =
+                if (node.isShowingHintText || (hintText != null && rawExisting == hintText)) {
+                    ""
+                } else {
+                    rawExisting
+                }
             val selStart = node.textSelectionStart
             val selEnd = node.textSelectionEnd
             val insertAt = if (selStart >= 0) selStart.coerceAtMost(existing.length) else existing.length

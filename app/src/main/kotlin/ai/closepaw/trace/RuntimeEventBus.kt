@@ -12,6 +12,15 @@ data class RuntimeEvent(
     val toolName: String? = null,
     val message: String? = null,
     val outcome: String? = null,
+    /** Model id / provider for LLM and task events. Never a secret. */
+    val provider: String? = null,
+    val model: String? = null,
+    /** Verification state name (TaskOutcomeState) for verification events. */
+    val verification: String? = null,
+    /** Action/tool name that was verified (verification events). */
+    val action: String? = null,
+    /** Free-form result summary (verification events). Secrets must never be placed here. */
+    val result: String? = null,
 )
 
 /** Bounded live diagnostics events; persistent TraceRecorder remains the durable trace path. */

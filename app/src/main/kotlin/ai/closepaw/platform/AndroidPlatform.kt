@@ -118,6 +118,22 @@ interface AndroidPlatform {
      * @return ActionResult indicating success or failure
      */
     suspend fun launchApp(packageName: String): ActionResult
+
+    // =========================================================================
+    // Field Observation (verified text entry)
+    // =========================================================================
+
+    /**
+     * Re-read the editable field at the given point. Used to verify typed text
+     * against the requested value. Default returns null (unsupported platform);
+     * callers must treat null as "could not observe", never as success.
+     */
+    suspend fun readTextAt(x: Int, y: Int): FieldContent? = null
+
+    /**
+     * Re-read the currently focused editable field. Same null contract as [readTextAt].
+     */
+    suspend fun readFocusedText(): FieldContent? = null
 }
 
 /**

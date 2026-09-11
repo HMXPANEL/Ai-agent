@@ -41,6 +41,12 @@ internal class AgentTurnRunner(
                 val securityWarnings: List<String> = emptyList()
         )
         private val loopDetectionPolicy by lazy { LoopDetectionPolicy() }
+        /**
+         * Cross-turn verification memory (P5): one runner serves one task, so a
+         * plain field has exactly the right lifetime. Noted on every turn before
+         * the completion decision so fresh proof clears stale doubt.
+         */
+        private val verificationTracker = TaskVerificationTracker()
         private val executionPhaseRunner by lazy {
                 TurnExecutionPhaseRunner(
                         config = config,
@@ -227,11 +233,21 @@ internal class AgentTurnRunner(
                 arbitration: ToolArbitrationResult,
                 execution: ExecutionPhaseResult
         ): TurnOutcome {
+                // Record this turn first: fresh VERIFIED proof clears earlier doubt,
+                // fresh actuation without proof arms the cross-turn block.
+                val assessment = execution.verification?.assessment
+                        ?: TaskVerification.assess(
+                                executedToolNames = execution.executedTools.map { it.name },
+                                outputs = execution.executedTools.map { it.output },
+                                hasFailure = execution.executedTools.any { it.failed }
+                        )
+                verificationTracker.noteTurn(assessment)
                 val outcome = decideTurnOutcome(
                         policy = turnPolicyEngine,
                         turnResult = result,
                         arbitration = arbitration,
-                        execution = execution
+                        execution = execution,
+                        priorUnresolvedActuation = verificationTracker.hasUnresolvedActuation()
                 )
                 if (outcome is TurnOutcome.Complete) {
                         Log.i(TAG, "Turn $turnNumber: Task marked as complete - ${outcome.message}")

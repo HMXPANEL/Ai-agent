@@ -9,6 +9,7 @@ import ai.closepaw.agent.AgentEventDispatcher
 import ai.closepaw.agent.AgentExecutionConfig
 import ai.closepaw.agent.AgentStopReason
 import ai.closepaw.agent.HmxAgent
+import ai.closepaw.agent.StructuredTaskParser
 import ai.closepaw.agent.definition.AgentDefRegistry
 import ai.closepaw.agent.definition.ResolvedAgentRole
 import ai.closepaw.agent.subagent.IsolatedSubAgentRunner
@@ -92,6 +93,9 @@ internal class SessionAgentRunner(
             agentId = sessionId.value,
             agentRole = resolvedAgentDef.executionRole,
             modelName = modelName,
+            // Structured understanding assists verification; app labels resolve
+            // to packages lazily at check time (no new permissions needed).
+            structuredTask = StructuredTaskParser.parse(taskInput),
             evalTurnBudget = config.evalTurnBudget
         )
 

@@ -108,7 +108,13 @@ class SessionServices internal constructor(
         val userResponseChannel: UserResponseChannel = UserResponseChannel(),
         val memoryStore: MemoryStore = MemoryStore(java.io.File("")),
         val memoryRecaller: MemoryRecaller = MemoryRecaller(memoryStore),
-        val hmxDiagnostics: HmxDiagnostics = HmxDiagnostics.disabled()
+        val hmxDiagnostics: HmxDiagnostics = HmxDiagnostics.disabled(),
+        /** Bounded live diagnostics bus (P11 task/action/verification events). */
+        val runtimeEventBus: ai.closepaw.trace.RuntimeEventBus =
+            ai.closepaw.trace.RuntimeEventBus(),
+        /** Live device capabilities gating the LLM tool list (P10). */
+        val capabilityManager: ai.closepaw.tool.CapabilityManager =
+            ai.closepaw.tool.CapabilityManager()
 ) {
     companion object {
         private const val TAG = "SessionServices"
@@ -233,7 +239,14 @@ class SessionServices internal constructor(
                     agentSkillManager = agentSkillManager,
                     memoryStore = memoryStore,
                     memoryRecaller = memoryRecaller,
-                    hmxDiagnostics = hmxDiagnostics
+                    hmxDiagnostics = hmxDiagnostics,
+                    capabilityManager = ai.closepaw.tool.CapabilityManager(
+                        ai.closepaw.tool.AndroidDeviceCapabilitySource(
+                            appContext = context.applicationContext,
+                            termuxSnapshot = termuxSnapshot,
+                            accessibilityAvailable = true
+                        )
+                    )
             )
         }
 
@@ -359,7 +372,9 @@ class SessionServices internal constructor(
             userResponseChannel: UserResponseChannel = this.userResponseChannel,
             memoryStore: MemoryStore = this.memoryStore,
             memoryRecaller: MemoryRecaller = this.memoryRecaller,
-            hmxDiagnostics: HmxDiagnostics = this.hmxDiagnostics
+            hmxDiagnostics: HmxDiagnostics = this.hmxDiagnostics,
+            runtimeEventBus: ai.closepaw.trace.RuntimeEventBus = this.runtimeEventBus,
+            capabilityManager: ai.closepaw.tool.CapabilityManager = this.capabilityManager
     ): SessionServices {
         return SessionServices(
                 toolRegistry = toolRegistry,
@@ -382,7 +397,9 @@ class SessionServices internal constructor(
                 userResponseChannel = userResponseChannel,
                 memoryStore = memoryStore,
                 memoryRecaller = memoryRecaller,
-                hmxDiagnostics = hmxDiagnostics
+                hmxDiagnostics = hmxDiagnostics,
+                runtimeEventBus = runtimeEventBus,
+                capabilityManager = capabilityManager
         )
     }
 

@@ -353,6 +353,12 @@ class AccessibilityPlatform(
         }
     }
 
+    override suspend fun readTextAt(x: Int, y: Int): FieldContent =
+            nodeActionPerformer.readEditableTextAt(x, y)
+
+    override suspend fun readFocusedText(): FieldContent =
+            nodeActionPerformer.readFocusedEditableText()
+
     override fun hasRequiredPermissions(): Boolean {
         // TODO: Consider checking Settings.canDrawOverlays() for overlay permission.
         //       However, overlay permission should be verified at MainActivity level,
