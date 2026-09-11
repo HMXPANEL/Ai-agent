@@ -4,6 +4,7 @@ import ai.closepaw.app.AppSettingsStore
 import ai.closepaw.history.ChatBackup.BackupReport
 import ai.closepaw.history.ChatBackup.PrefsBackup
 import ai.closepaw.history.model.SessionRecord
+import ai.closepaw.history.storage.SessionStorage
 import ai.closepaw.llm.LLMProvider
 import ai.closepaw.protocol.LLMBackendType
 import android.util.Log

@@ -13,7 +13,7 @@ import ai.closepaw.protocol.TaskOutcomeState
  *
  * Lifecycle: one instance per agent task; [reset] on new goal.
  */
-class TaskVerificationTracker {
+internal class TaskVerificationTracker {
 
     private var unresolvedActuation: Boolean = false
     private var actuatedTurns: Int = 0

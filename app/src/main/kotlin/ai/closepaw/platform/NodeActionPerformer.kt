@@ -146,10 +146,10 @@ class NodeActionPerformer(
      * means "no readable node", never "empty".
      */
     suspend fun readEditableTextAt(x: Int, y: Int): FieldContent {
-        return onMain {
-            withRoot { root ->
+        return onMainValue {
+            withRootValue(FieldContent.missing()) { root ->
                 val node = AccessibilityNodeFinder.findNodeAtLocation(root, x, y)
-                        ?: return@withRoot FieldContent.missing()
+                        ?: return@withRootValue FieldContent.missing()
                 try {
                     readFieldContent(node)
                 } finally {
@@ -161,10 +161,10 @@ class NodeActionPerformer(
 
     /** Re-read the focused editable field for write verification (P2). */
     suspend fun readFocusedEditableText(): FieldContent {
-        return onMain {
-            withRoot { root ->
+        return onMainValue {
+            withRootValue(FieldContent.missing()) { root ->
                 val node = AccessibilityNodeFinder.findFocusedEditableNode(root)
-                        ?: return@withRoot FieldContent.missing()
+                        ?: return@withRootValue FieldContent.missing()
                 try {
                     readFieldContent(node)
                 } finally {
@@ -311,6 +311,20 @@ class NodeActionPerformer(
     }
 
     private suspend inline fun onMain(crossinline block: () -> ActionResult): ActionResult {
+        return withContext(Dispatchers.Main) { block() }
+    }
+
+    /** Generic root accessor for non-ActionResult readers (verification paths). */
+    private inline fun <T> withRootValue(noRoot: T, block: (AccessibilityNodeInfo) -> T): T {
+        val root = rootProvider() ?: return noRoot
+        return try {
+            block(root)
+        } finally {
+            root.recycleCompat()
+        }
+    }
+
+    private suspend inline fun <T> onMainValue(crossinline block: () -> T): T {
         return withContext(Dispatchers.Main) { block() }
     }
 
