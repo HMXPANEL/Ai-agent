@@ -46,14 +46,21 @@ class TaskVerificationGateTest {
     }
 
     @Test
-    fun `unverified mobile_action blocks success completion`() {
-        val type = toolCall("mobile_action")
+    fun `unverified actuation blocks success completion`() {
+        // Reachable shape: completion planned+executed while the execution
+        // record carries an unverified actuation (defense in depth — the turn
+        // runner normally separates these across turns, see tracker tests).
         val complete = toolCall("complete_task", JSONObject("""{"answer":"sent"}"""))
-        val (turnResult, arbitration, _) = completeTurn(type, complete)
-        val execution = successExecution(
-            "mobile_action" to "Success: typed [unverified]",
-            "complete_task" to "Success: Task completed successfully."
-        ).copy(executedToolIds = setOf(type.id, complete.id))
+        val (turnResult, arbitration, _) = completeTurn(complete)
+        val execution = ExecutionPhaseResult(
+            executedToolIds = setOf(complete.id),
+            terminatedEarly = false,
+            lastTerminalResult = null,
+            executedTools = listOf(
+                ExecutedTool("mobile_action", "Success: typed [unverified]", failed = false),
+                ExecutedTool("complete_task", "Success: Task completed successfully.", failed = false)
+            )
+        )
 
         val outcome = decideTurnOutcome(policy, turnResult, arbitration, execution)
 
@@ -63,14 +70,18 @@ class TaskVerificationGateTest {
     }
 
     @Test
-    fun `verified mobile_action allows success completion`() {
-        val type = toolCall("mobile_action")
+    fun `verified actuation allows success completion`() {
         val complete = toolCall("complete_task", JSONObject("""{"answer":"sent"}"""))
-        val (turnResult, arbitration, _) = completeTurn(type, complete)
-        val execution = successExecution(
-            "mobile_action" to "Success: Typed into element",
-            "complete_task" to "Success: Task completed successfully."
-        ).copy(executedToolIds = setOf(type.id, complete.id))
+        val (turnResult, arbitration, _) = completeTurn(complete)
+        val execution = ExecutionPhaseResult(
+            executedToolIds = setOf(complete.id),
+            terminatedEarly = false,
+            lastTerminalResult = null,
+            executedTools = listOf(
+                ExecutedTool("mobile_action", "Success: Typed into element", failed = false),
+                ExecutedTool("complete_task", "Success: Task completed successfully.", failed = false)
+            )
+        )
 
         val outcome = decideTurnOutcome(policy, turnResult, arbitration, execution)
 
@@ -93,11 +104,10 @@ class TaskVerificationGateTest {
 
     @Test
     fun `failed actuation blocks success completion`() {
-        val type = toolCall("mobile_action")
         val complete = toolCall("complete_task", JSONObject("""{"answer":"sent"}"""))
-        val (turnResult, arbitration, _) = completeTurn(type, complete)
+        val (turnResult, arbitration, _) = completeTurn(complete)
         val execution = ExecutionPhaseResult(
-            executedToolIds = setOf(type.id, complete.id),
+            executedToolIds = setOf(complete.id),
             terminatedEarly = false,
             lastTerminalResult = null,
             executedTools = listOf(
@@ -113,13 +123,17 @@ class TaskVerificationGateTest {
 
     @Test
     fun `failure completion is not blocked by unverified actuation`() {
-        val type = toolCall("mobile_action")
         val complete = toolCall("complete_task", JSONObject("""{"status":"failure","answer":"blocked"}"""))
-        val (turnResult, arbitration, _) = completeTurn(type, complete)
-        val execution = successExecution(
-            "mobile_action" to "Success: typed [unverified]",
-            "complete_task" to "Task failed."
-        ).copy(executedToolIds = setOf(type.id, complete.id))
+        val (turnResult, arbitration, _) = completeTurn(complete)
+        val execution = ExecutionPhaseResult(
+            executedToolIds = setOf(complete.id),
+            terminatedEarly = false,
+            lastTerminalResult = null,
+            executedTools = listOf(
+                ExecutedTool("mobile_action", "Success: typed [unverified]", failed = false),
+                ExecutedTool("complete_task", "Task failed.", failed = false)
+            )
+        )
 
         val outcome = decideTurnOutcome(policy, turnResult, arbitration, execution)
 
@@ -158,5 +172,45 @@ class TaskVerificationGateTest {
             .isEqualTo(TaskVerification.Assessment.REQUIRED_BUT_UNVERIFIED)
         assertThat(a(listOf("complete_task"), listOf("Success."), false))
             .isEqualTo(TaskVerification.Assessment.NOT_REQUIRED)
+    }
+
+    @Test
+    fun `blocksUnverifiedCompletion helper matrix`() {
+        fun exec(
+            tools: List<ExecutedTool>,
+            verification: TurnVerificationResult? = null
+        ) = ExecutionPhaseResult(
+            executedToolIds = emptySet(),
+            terminatedEarly = false,
+            lastTerminalResult = null,
+            executedTools = tools,
+            verification = verification
+        )
+        val ok = ExecutedTool("mobile_action", "Success: typed", false)
+        val unverified = ExecutedTool("mobile_action", "Success: typed [unverified]", false)
+        val failed = ExecutedTool("mobile_action", "Success: typed", true)
+        val info = ExecutedTool("complete_task", "Success.", false)
+
+        assertThat(blocksUnverifiedCompletion(exec(emptyList()))).isFalse()
+        assertThat(blocksUnverifiedCompletion(exec(listOf(info)))).isFalse()
+        assertThat(blocksUnverifiedCompletion(exec(listOf(ok)))).isFalse()
+        assertThat(blocksUnverifiedCompletion(exec(listOf(unverified)))).isTrue()
+        assertThat(blocksUnverifiedCompletion(exec(listOf(failed)))).isTrue()
+        assertThat(
+            blocksUnverifiedCompletion(
+                exec(
+                    listOf(ok),
+                    TurnVerificationResult(TaskVerification.Assessment.REQUIRED_BUT_UNVERIFIED)
+                )
+            )
+        ).isTrue()
+        assertThat(
+            blocksUnverifiedCompletion(
+                exec(
+                    listOf(unverified),
+                    TurnVerificationResult(TaskVerification.Assessment.REQUIRED_AND_VERIFIED)
+                )
+            )
+        ).isFalse()
     }
 }

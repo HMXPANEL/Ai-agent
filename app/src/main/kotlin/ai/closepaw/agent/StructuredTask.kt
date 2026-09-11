@@ -72,8 +72,10 @@ object StructuredTaskParser {
     fun parse(rawRequest: String, knownApps: Map<String, String> = emptyMap()): StructuredTask {
         val text = rawRequest.trim()
         val lower = text.lowercase()
-        val intent = detectIntent(lower)
+        // Application first: intent detection may consult the app label
+        // generically (e.g. any *mail* app implies email) without hard-coding apps.
         val (application, packageName, remainder) = detectApplication(text, knownApps)
+        val intent = detectIntent(lower, application)
         val content = extractContent(text, intent)
         val entities = extractEntities(remainder.ifEmpty { text }, application)
         val expectedRecipient = entities.firstOrNull()
@@ -98,15 +100,19 @@ object StructuredTaskParser {
         )
     }
 
-    private fun detectIntent(lower: String): TaskIntent {
+    private fun detectIntent(lower: String, application: String?): TaskIntent {
         val first = lower.split(Regex("\\s+")).firstOrNull() ?: return TaskIntent.UNKNOWN
+        // Generic mail-app rule: any application whose label contains "mail"
+        // (Gmail, Email, FairEmail…) implies email — no fixed app list.
+        val mailApp = application?.contains("mail", ignoreCase = true) == true
         return when {
             lower.contains("your settings") || lower.contains("yourself") ||
                 lower.contains("which model") || lower.contains("what model") ||
                 lower.contains("change the model") || lower.contains("switch provider") ||
                 lower.contains("my previous chats") || lower.contains("my chats") ||
                 lower.contains("last task fail") || lower.contains("diagnostics") -> TaskIntent.HMX_SELF
-            first in setOf("send") && ("email" in lower || "mail to" in lower) -> TaskIntent.SEND_EMAIL
+            first in setOf("send") &&
+                ("email" in lower || "mail to" in lower || mailApp) -> TaskIntent.SEND_EMAIL
             // Generic messaging verbs only — never app names (no per-app core branches).
             first in setOf("send", "text", "message", "dm") -> TaskIntent.SEND_MESSAGE
             first in setOf("call", "phone", "dial", "ring") -> TaskIntent.CALL
