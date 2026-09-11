@@ -16,8 +16,10 @@ import java.io.OutputStream
  * app uninstall; re-import reads them back (SAF picker or newest match). All
  * operations are best-effort nullables — backup must never crash the app.
  * Only ever handles [ChatBackup] documents (no credentials by construction).
+ *
+ * Open for tests (a failing mirror proves restore-if-empty never consults it).
  */
-class BackupMediaMirror(private val appContext: Context) {
+open class BackupMediaMirror(private val appContext: Context) {
 
     companion object {
         private const val TAG = "BackupMirror"
@@ -48,7 +50,7 @@ class BackupMediaMirror(private val appContext: Context) {
     }
 
     /** Newest backup document Uri in Downloads, or null when none exists. */
-    fun latestBackupUri(): Uri? {
+    open fun latestBackupUri(): Uri? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
         return runCatching {
             val resolver = appContext.contentResolver

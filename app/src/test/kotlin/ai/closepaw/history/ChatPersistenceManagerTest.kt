@@ -3,6 +3,7 @@ package ai.closepaw.history
 import ai.closepaw.app.AppSettingsStore
 import ai.closepaw.auth.FakeSharedPreferences
 import ai.closepaw.history.model.SessionRecord
+import ai.closepaw.history.storage.SessionStorage
 import android.content.Context
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
