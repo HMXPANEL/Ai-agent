@@ -1,13 +1,13 @@
 package ai.closepaw.ui.settings
 
-import ai.closepaw.ui.settings.SettingsCard
-
 import ai.closepaw.history.BackupMediaMirror
 import ai.closepaw.history.ChatBackup
 import ai.closepaw.history.ChatBackup.RestoreReport
+import ai.closepaw.history.ChatBackup.ExportReport
 import ai.closepaw.history.ChatPersistenceManager
 import ai.closepaw.app.AppSettingsStore
 import ai.closepaw.history.SessionStorage
+import ai.closepaw.ui.settings.SettingsCard
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -35,9 +35,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.ByteArrayInputStream
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import androidx.compose.ui.platform.LocalContext
 import ai.closepaw.history.BackupMediaMirror
 import ai.closepaw.history.ChatBackup
@@ -57,6 +54,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -68,42 +67,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.ByteArrayInputStream
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import androidx.compose.ui.platform.LocalContext
-import ai.closepaw.history.BackupMediaMirror
-import ai.closepaw.history.ChatBackup
-import ai.closepaw.history.ChatPersistenceManager
-import ai.closepaw.app.AppSettingsStore
-import ai.closepaw.history.SessionStorage
-import android.content.Context
-import android.util.Log
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
-import java.io.ByteArrayInputStream
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 internal fun BackupRestoreSettingsPage(
@@ -123,7 +87,7 @@ internal fun BackupRestoreSettingsPage(
     var showResultDialog by remember { mutableStateOf(false) }
     var resultMessage by remember { mutableStateOf("") }
 
-    val exportReport by remember { mutableStateOf<ChatBackup.ExportReport?>(null) }
+    val exportReport by remember { mutableStateOf<ExportReport?>(null) }
     val restoreReport by remember { mutableStateOf<RestoreReport?>(null) }
     val verifyReport by remember { mutableStateOf<ChatBackup.BackupReport?>(null) }
 
