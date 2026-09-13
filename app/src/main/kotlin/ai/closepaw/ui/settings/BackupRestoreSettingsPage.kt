@@ -37,6 +37,7 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.ByteArrayInputStream
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.Modifier
 import ai.closepaw.history.BackupMediaMirror
 import ai.closepaw.history.ChatBackup
 import ai.closepaw.history.ChatPersistenceManager
@@ -68,6 +69,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.ByteArrayInputStream
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.platform.LocalContext
 
 @Composable
@@ -106,7 +110,9 @@ internal fun BackupRestoreSettingsPage(
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.closePaw.spacing.md)
         ) {
             // Export section
-            SettingsCard(title = "Export Backup") {
+            SettingsCard(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.closePaw.spacing.sm)) {
                     Text(
                         text = "Create a portable backup file containing your chat history and non-secret settings (model, provider, URLs). The backup is a versioned, checksummed JSON file saved to your Downloads folder.",
@@ -138,7 +144,7 @@ internal fun BackupRestoreSettingsPage(
             }
 
             // Import section
-            SettingsCard(title = "Import Backup") {
+            SettingsCard {
                 Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.closePaw.spacing.sm)) {
                     Text(
                         text = "Import a backup file from your Downloads folder. Only new or newer sessions are added — existing newer data is never overwritten.",
@@ -161,7 +167,7 @@ internal fun BackupRestoreSettingsPage(
             }
 
             // Auto-restore status
-            SettingsCard(title = "Auto-Restore on Fresh Install") {
+            SettingsCard {
                 Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.closePaw.spacing.sm)) {
                     Text(
                         text = "When you uninstall and reinstall HMX, your chats will automatically restore from the most recent backup in Downloads — but only if the local store is empty. Your current chats are never overwritten.",
@@ -173,7 +179,7 @@ internal fun BackupRestoreSettingsPage(
             }
 
             // Stats
-            SettingsCard(title = "Backup Stats") {
+            SettingsCard {
                 Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.closePaw.spacing.xs)) {
                     Text(
                         text = "Format: versioned JSON · SHA-256 checksum · zlib compressed",
