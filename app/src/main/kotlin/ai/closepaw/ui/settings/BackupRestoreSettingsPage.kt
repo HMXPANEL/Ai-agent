@@ -4,6 +4,7 @@ import ai.closepaw.history.BackupMediaMirror
 import ai.closepaw.history.ChatBackup
 import ai.closepaw.history.ChatBackup.RestoreReport
 import ai.closepaw.history.ChatBackup.ExportReport
+import ai.closepaw.history.ChatBackup.BackupReport
 import ai.closepaw.history.ChatPersistenceManager
 import ai.closepaw.app.AppSettingsStore
 import ai.closepaw.history.SessionStorage
