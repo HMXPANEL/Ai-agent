@@ -86,6 +86,11 @@ internal fun SettingsHomePage(
                 onClick = { onNavigate(SettingsPage.APP_ACCESS) }
             )
             SettingsNavigationRow(
+                title = "Backup & Restore",
+                subtitle = "Export, import, and manage chat backups",
+                onClick = { onNavigate(SettingsPage.BACKUP_RESTORE) }
+            )
+            SettingsNavigationRow(
                 title = "System & Debug",
                 subtitle = permissionsSubtitle(isAccessibilityEnabled, isOverlayEnabled, debugMode),
                 onClick = { onNavigate(SettingsPage.PERMISSIONS_ADVANCED) }

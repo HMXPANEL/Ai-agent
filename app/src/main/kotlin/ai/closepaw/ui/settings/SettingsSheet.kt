@@ -28,6 +28,7 @@ import ai.closepaw.app.MemoryEditGate
 import ai.closepaw.llm.AuthMode
 import ai.closepaw.llm.LLMProvider
 import ai.closepaw.llm.ModelCatalog
+import ai.closepaw.history.SessionStorage
 import ai.closepaw.memory.MemoryStore
 import ai.closepaw.protocol.ApprovalMode
 import ai.closepaw.protocol.LLMBackendType
@@ -44,6 +45,7 @@ enum class SettingsPage {
     MEMORY,
     PERMISSIONS_ADVANCED,
     APP_ACCESS,
+    BACKUP_RESTORE,
     OPEN_SOURCE_LICENSES,
 }
 
@@ -217,6 +219,14 @@ fun SettingsSheet(
                         approvalMode = approvalMode,
                         onBack = { settingsPage = SettingsPage.HOME },
                         onClose = onDismiss,
+                    )
+                    SettingsPage.BACKUP_RESTORE -> BackupRestoreSettingsPage(
+                        onBack = { settingsPage = SettingsPage.HOME },
+                        onClose = onDismiss,
+                        context = LocalContext.current,
+                        appSettingsStore = AppSettingsStore(LocalContext.current),
+                        sessionStorage = SessionStorage(LocalContext.current),
+                        onDismiss = onDismiss,
                     )
                     SettingsPage.OPEN_SOURCE_LICENSES -> OpenSourceLicensesPage(
                         onBack = { settingsPage = SettingsPage.HOME },
