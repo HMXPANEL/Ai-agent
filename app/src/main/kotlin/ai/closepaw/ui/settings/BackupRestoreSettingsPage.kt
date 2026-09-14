@@ -2,12 +2,12 @@ package ai.closepaw.ui.settings
 
 import ai.closepaw.history.BackupMediaMirror
 import ai.closepaw.history.ChatBackup
-import ai.closepaw.history.ChatBackup.RestoreReport
-import ai.closepaw.history.ChatBackup.ExportReport
 import ai.closepaw.history.ChatBackup.BackupReport
 import ai.closepaw.history.ChatPersistenceManager
+import ai.closepaw.history.ChatPersistenceManager.ExportReport
+import ai.closepaw.history.ChatPersistenceManager.RestoreReport
 import ai.closepaw.app.AppSettingsStore
-import ai.closepaw.history.SessionStorage
+import ai.closepaw.history.storage.SessionStorage
 import ai.closepaw.ui.settings.SettingsCard
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
