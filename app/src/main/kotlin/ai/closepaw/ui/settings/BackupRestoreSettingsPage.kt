@@ -23,6 +23,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PageMastheadDrillDown
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,8 +59,8 @@ internal fun BackupRestoreSettingsPage(
     var showResultDialog by remember { mutableStateOf(false) }
     var resultMessage by remember { mutableStateOf("") }
 
-    val exportReport by remember { mutableStateOf<ai.closepaw.history.ChatPersistenceManager.ExportReport?>(null) }
-    val restoreReport by remember { mutableStateOf<ai.closepaw.history.ChatPersistenceManager.RestoreReport?>(null) }
+    val exportReport by remember { mutableStateOf<ChatPersistenceManager.ExportReport?>(null) }
+    val restoreReport by remember { mutableStateOf<ChatPersistenceManager.RestoreReport?>(null) }
     val verifyReport by remember { mutableStateOf<ChatBackup.BackupReport?>(null) }
 
     val lastExportedCount by remember { mutableStateOf<Int?>(null) }
