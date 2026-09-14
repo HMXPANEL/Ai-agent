@@ -29,7 +29,7 @@ import ai.closepaw.app.MemoryEditGate
 import ai.closepaw.llm.AuthMode
 import ai.closepaw.llm.LLMProvider
 import ai.closepaw.llm.ModelCatalog
-import ai.closepaw.history.SessionStorage
+import ai.closepaw.history.storage.SessionStorage
 import ai.closepaw.memory.MemoryStore
 import ai.closepaw.protocol.ApprovalMode
 import ai.closepaw.protocol.LLMBackendType
