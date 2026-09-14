@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import ai.closepaw.app.AppSettingsStore
 import ai.closepaw.app.MemoryEditGate
 import ai.closepaw.llm.AuthMode
 import ai.closepaw.llm.LLMProvider

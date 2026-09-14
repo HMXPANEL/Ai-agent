@@ -4,8 +4,6 @@ import ai.closepaw.history.BackupMediaMirror
 import ai.closepaw.history.ChatBackup
 import ai.closepaw.history.ChatBackup.BackupReport
 import ai.closepaw.history.ChatPersistenceManager
-import ai.closepaw.history.ChatPersistenceManager.ExportReport
-import ai.closepaw.history.ChatPersistenceManager.RestoreReport
 import ai.closepaw.app.AppSettingsStore
 import ai.closepaw.history.storage.SessionStorage
 import ai.closepaw.ui.settings.SettingsCard
@@ -60,8 +58,8 @@ internal fun BackupRestoreSettingsPage(
     var showResultDialog by remember { mutableStateOf(false) }
     var resultMessage by remember { mutableStateOf("") }
 
-    val exportReport by remember { mutableStateOf<ExportReport?>(null) }
-    val restoreReport by remember { mutableStateOf<RestoreReport?>(null) }
+    val exportReport by remember { mutableStateOf<ai.closepaw.history.ChatPersistenceManager.ExportReport?>(null) }
+    val restoreReport by remember { mutableStateOf<ai.closepaw.history.ChatPersistenceManager.RestoreReport?>(null) }
     val verifyReport by remember { mutableStateOf<ChatBackup.BackupReport?>(null) }
 
     val lastExportedCount by remember { mutableStateOf<Int?>(null) }
