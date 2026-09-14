@@ -38,6 +38,8 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.ByteArrayInputStream
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.Modifier
+import ai.closepaw.ui.settings.SettingsCard
 import androidx.compose.material3.PageMastheadDrillDown
 import ai.closepaw.ui.theme.closePaw
 
