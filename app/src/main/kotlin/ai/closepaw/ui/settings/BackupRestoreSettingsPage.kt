@@ -25,6 +25,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PageMastheadDrillDown
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,42 +38,9 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.ByteArrayInputStream
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.Modifier
-import ai.closepaw.history.BackupMediaMirror
-import ai.closepaw.history.ChatBackup
-import ai.closepaw.history.ChatPersistenceManager
-import ai.closepaw.app.AppSettingsStore
-import ai.closepaw.history.SessionStorage
-import android.content.Context
-import android.util.Log
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
-import java.io.ByteArrayInputStream
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import androidx.compose.ui.platform.LocalContext
+import ai.closepaw.ui.settings.SettingsCard
+import androidx.compose.material3.PageMastheadDrillDown
+import ai.closepaw.ui.theme.closePaw
 
 @Composable
 internal fun BackupRestoreSettingsPage(
@@ -100,7 +68,7 @@ internal fun BackupRestoreSettingsPage(
     val lastRestoredCount by remember { mutableStateOf<Int?>(null) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        androidx.compose.material3.PageMastheadDrillDown(title = "Backup & Restore", onBack = onBack, onClose = onClose)
+        PageMastheadDrillDown(title = "Backup & Restore", onBack = onBack, onClose = onClose)
 
         Column(
             modifier = Modifier
