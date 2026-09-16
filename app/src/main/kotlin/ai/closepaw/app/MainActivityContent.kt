@@ -73,10 +73,6 @@ internal fun MainActivityContent(
     onOverlayClick: () -> Unit,
     repairModel: PermissionRepairModel? = null,
     onFixBattery: () -> Unit = {},
-    openAiAuthUiState: OpenAiAuthUiState = OpenAiAuthUiState.SignedOut,
-    onStartOAuth: () -> Unit = {},
-    onCancelOAuth: () -> Unit = {},
-    onSignOut: () -> Unit = {},
     initialSettingsDeepLink: SettingsDeepLink? = null,
     effectivePlatformModeFlow: StateFlow<PlatformMode?> = MutableStateFlow(null),
     appClassifier: AppClassifier,
@@ -184,16 +180,11 @@ internal fun MainActivityContent(
                     platformMode = settingsState.platformMode,
                     effectivePlatformMode = effectivePlatformMode,
                     onPlatformModeChange = settingsState::updatePlatformMode,
-                    openAiAuthUiState = openAiAuthUiState,
-                    onStartOAuth = onStartOAuth,
-                    onCancelOAuth = onCancelOAuth,
-                    onSignOut = onSignOut,
                     onDismiss = dismissSettings,
                     initialPage = when (pendingDeepLink?.page) {
                         DeepLinkPage.LLM_AUTH -> SettingsPage.LLM_AUTH
                         DeepLinkPage.HOME, null -> SettingsPage.HOME
                     },
-                    initialAuthTab = pendingDeepLink?.authTab,
                     initialProvider = pendingDeepLink?.provider,
                     otherBaseUrl = settingsState.otherBaseUrl,
                     otherModelId = settingsState.otherModelId,

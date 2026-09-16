@@ -96,6 +96,19 @@ class AuthStore(
         }
     }
 
+    /** Return the API key for [provider] as a Result, avoiding exceptions for expected failures. */
+    fun getApiKeyResult(provider: LLMProvider): Result<String> {
+        val cred = read(provider.name) ?: return Result.failure(MissingCredential(provider))
+        return when (cred) {
+            is AuthCredential.ApiKey -> Result.success(cred.key)
+            is AuthCredential.OAuth -> Result.failure(WrongCredentialType(
+                provider = provider,
+                expected = "ApiKey",
+                actual = "OAuth",
+            ))
+        }
+    }
+
     /**
      * Return fresh Codex headers for [provider]. Refreshes under [refreshMutex]
      * if the cached access token is within [REFRESH_BUFFER_MS] of expiry.

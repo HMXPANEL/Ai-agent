@@ -104,19 +104,15 @@ class OnboardingViewModel(
             when (result) {
                 is OpenAiSignInResult.Success -> {
                     val tokens = result.tokens
+                    // The OAuth flow already exchanges the ChatGPT token for an OpenAI API key.
+                    // Store it as an API key credential for the OPENAI_API provider.
                     withContext(Dispatchers.IO) {
                         authStore.set(
-                            LLMProvider.OPENAI_CODEX,
-                            AuthCredential.OAuth(
-                                accessToken = tokens.accessToken,
-                                refreshToken = tokens.refreshToken,
-                                expiresAt = tokens.expiresAt,
-                                email = tokens.email,
-                                idToken = tokens.idToken,
-                            )
+                            LLMProvider.OPENAI_API,
+                            AuthCredential.ApiKey(tokens.accessToken)
                         )
                     }
-                    applyDefaultModelFor(LLMProvider.OPENAI_CODEX)
+                    applyDefaultModelFor(LLMProvider.OPENAI_API)
                     store.saveOutcome(WizardStep.ApiKey, StepOutcome.Done)
                     outcomes = outcomes.copy(apiKey = StepOutcome.Done)
                     stepState = ApiKeyStepState.OAuthSuccess(tokens.email ?: "")
@@ -445,7 +441,7 @@ class OnboardingViewModel(
      * sees the OAuth success card on re-entry rather than a generic "Valid" badge.
      */
     private fun tryRenderExistingCredential(): Boolean {
-        if (authStore.has(LLMProvider.OPENAI_CODEX)) {
+        if (authStore.has(LLMProvider.OPENAI_API)) {
             authMethod = ApiKeyAuthMethod.OAUTH
             selectedProvider = OnboardingProvider.OPENAI_API
             stepState = ApiKeyStepState.OAuthSuccess("")

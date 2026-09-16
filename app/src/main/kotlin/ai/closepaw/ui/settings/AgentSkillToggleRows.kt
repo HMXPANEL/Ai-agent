@@ -4,6 +4,7 @@ import ai.closepaw.agent.cognition.skills.AgentSkillCatalog
 import ai.closepaw.agent.cognition.skills.AgentSkillEntry
 import ai.closepaw.app.AppSettingsStore
 import ai.closepaw.session.SessionServices
+import ai.closepaw.storage.ClosePawStorage
 import ai.closepaw.ui.theme.closePaw
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
@@ -195,7 +196,8 @@ private fun rememberDefaultSkillsLoader(
 ): suspend () -> List<AgentSkillLoaderResult> = remember(appContext) {
     suspend {
         withContext(Dispatchers.IO) {
-            val skillsDir = File(appContext.filesDir, "skills")
+            val closePawStorage = ClosePawStorage.getInstance(appContext)
+            val skillsDir = closePawStorage.skillsDir
             try {
                 SessionServices.installBundledAgentSkills(appContext, skillsDir)
             } catch (e: Exception) {

@@ -29,13 +29,6 @@ enum class LLMProvider(
         defaultBaseUrl = null,
     ),
 
-    /** OpenAI via ChatGPT/Codex OAuth — Responses API through the Codex backend. */
-    OPENAI_CODEX(
-        mode = AuthMode.OAuth,
-        defaultApiKeyEnv = "OPENAI_API_KEY",
-        defaultBaseUrl = null,
-    ),
-
     /** OpenRouter — openrouter.ai (aggregates many model providers). */
     OPENROUTER(
         mode = AuthMode.ApiKey,
@@ -68,7 +61,6 @@ enum class LLMProvider(
 val LLMProvider.displayLabel: String
     get() = when (this) {
         LLMProvider.OPENAI_API -> "OpenAI"
-        LLMProvider.OPENAI_CODEX -> "OpenAI (ChatGPT sign-in)"
         LLMProvider.OPENROUTER -> "OpenRouter"
         LLMProvider.OTHER -> "Other"
         LLMProvider.LOCAL_LFM -> "Local"

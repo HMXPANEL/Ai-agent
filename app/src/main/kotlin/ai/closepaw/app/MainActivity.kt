@@ -30,7 +30,7 @@ import ai.closepaw.history.ResumedSessionData
 import ai.closepaw.history.SessionHistoryManager
 import ai.closepaw.history.model.SessionInfo
 import ai.closepaw.history.model.isReloadable
-import ai.closepaw.history.storage.SessionStorage
+import ai.closepaw.storage.ClosePawStorage
 import ai.closepaw.llm.LFMLLMClient
 import ai.closepaw.llm.LLMProvider
 import ai.closepaw.llm.LocalLLMConfig
@@ -98,8 +98,11 @@ class MainActivity : ComponentActivity() {
 
     private val sessionScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val coordinator = SessionCoordinator(sessionScope)
+    private val closePawStorage: ClosePawStorage by lazy {
+        ClosePawStorage.getInstance(applicationContext)
+    }
     private val settingsMemoryStore: MemoryStore by lazy {
-        MemoryStore(java.io.File(applicationContext.filesDir, "memory"))
+        MemoryStore(closePawStorage.memoryDir)
     }
     private val memoryEditGate: MemoryEditGate by lazy {
         MemoryEditGate(coordinator, sessionScope)
@@ -124,10 +127,6 @@ class MainActivity : ComponentActivity() {
     private lateinit var authStore: AuthStore
     private var onboardingViewModel: OnboardingViewModel? = null
     private var onboardingRequired by mutableStateOf(false)
-    private var openAiAuthUiState by mutableStateOf<ai.closepaw.ui.settings.OpenAiAuthUiState>(
-        ai.closepaw.ui.settings.OpenAiAuthUiState.SignedOut
-    )
-    private var oauthJob: kotlinx.coroutines.Job? = null
     private var pendingVoicePermissionRequest by mutableStateOf(false)
 
     internal fun isVoicePermissionRequestPending(): Boolean = pendingVoicePermissionRequest
@@ -191,7 +190,7 @@ class MainActivity : ComponentActivity() {
 
         consumeVoicePermissionRequestIfPresent(intent)
         handleIntent(intent)
-        val sessionStorage = SessionStorage(applicationContext)
+        val sessionStorage = SessionStorage(closePawStorage.sessionsDir)
         sessionHistoryManager = SessionHistoryManager.create(sessionStorage, sessionScope)
         // P1 reinstall recovery: adopt the shared-storage backup ONLY when the
         // live store is empty (fresh install). Never deletes or overwrites.
@@ -296,7 +295,7 @@ class MainActivity : ComponentActivity() {
                     },
                     onNewSession = {
                         coordinator.selectedSessionForReload = null
-                        lifecycleScope.launch { coordinator.clearSession() }
+                        lifecycleScope.launch { coordinator.clearSession(this@MainActivity) }
                         viewModel.startNewSession(settingsState.selectedModel, BuildConfig.VERSION_NAME)
                     },
                     onOpenViewer = { openViewer(this@MainActivity) },
@@ -313,10 +312,6 @@ class MainActivity : ComponentActivity() {
                     onFixBattery = {
                         handleOnboardingEffect(OnboardingEffect.OpenBatteryOptimization)
                     },
-                    openAiAuthUiState = openAiAuthUiState,
-                    onStartOAuth = ::handleStartOAuth,
-                    onCancelOAuth = ::handleCancelOAuth,
-                    onSignOut = ::handleSignOut,
                     effectivePlatformModeFlow = AgentService.instance?.effectivePlatformMode
                         ?: kotlinx.coroutines.flow.MutableStateFlow(null),
                     appClassifier = AppClassifierHolder.get(applicationContext),
@@ -462,7 +457,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private suspend fun clearCurrentSession() {
-        coordinator.clearSession()
+        coordinator.clearSession(this)
 
         if (::viewModel.isInitialized) {
             viewModel.clearConversation()
@@ -839,77 +834,6 @@ class MainActivity : ComponentActivity() {
         return false
     }
 
-    // ── Settings OAuth handlers ──
-
-    private fun deriveOpenAiAuthUiState() {
-        val cred = kotlinx.coroutines.runBlocking { authStore.get(LLMProvider.OPENAI_CODEX) }
-        val oauthCred = cred as? AuthCredential.OAuth
-        openAiAuthUiState = if (oauthCred != null) {
-            ai.closepaw.ui.settings.OpenAiAuthUiState.SignedIn(oauthCred.email)
-        } else {
-            ai.closepaw.ui.settings.OpenAiAuthUiState.SignedOut
-        }
-    }
-
-    private fun handleStartOAuth() {
-        if (oauthJob?.isActive == true) return
-
-        openAiAuthUiState = ai.closepaw.ui.settings.OpenAiAuthUiState.InProgress
-        oauthJob = lifecycleScope.launch {
-            val result = ai.closepaw.auth.openAiSignIn(
-                launchBrowser = { url ->
-                    try {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                        startActivity(intent)
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Failed to launch OAuth browser", e)
-                        throw e
-                    }
-                },
-                onCallbackReceived = {
-                    openAiAuthUiState = ai.closepaw.ui.settings.OpenAiAuthUiState.Finishing
-                },
-            )
-
-            when (result) {
-                is ai.closepaw.auth.OpenAiSignInResult.Success -> {
-                    val tokens = result.tokens
-                    withContext(Dispatchers.IO) {
-                        authStore.set(
-                            LLMProvider.OPENAI_CODEX,
-                            AuthCredential.OAuth(
-                                accessToken = tokens.accessToken,
-                                refreshToken = tokens.refreshToken,
-                                expiresAt = tokens.expiresAt,
-                                email = tokens.email,
-                                idToken = tokens.idToken,
-                            )
-                        )
-                    }
-                    settingsState.updateBackend(ai.closepaw.protocol.LLMBackendType.OPENAI)
-                    openAiAuthUiState = ai.closepaw.ui.settings.OpenAiAuthUiState.SignedIn(tokens.email)
-                    Log.d(TAG, "Settings OAuth success")
-                }
-                is ai.closepaw.auth.OpenAiSignInResult.Error -> {
-                    openAiAuthUiState = ai.closepaw.ui.settings.OpenAiAuthUiState.Error(result.message)
-                    Log.w(TAG, "Settings OAuth error: ${result.message}")
-                }
-            }
-        }
-    }
-
-    private fun handleCancelOAuth() {
-        oauthJob?.cancel()
-        oauthJob = null
-        openAiAuthUiState = ai.closepaw.ui.settings.OpenAiAuthUiState.SignedOut
-    }
-
-    private fun handleSignOut() {
-        lifecycleScope.launch { authStore.clear(LLMProvider.OPENAI_CODEX) }
-        openAiAuthUiState = ai.closepaw.ui.settings.OpenAiAuthUiState.SignedOut
-        Log.d(TAG, "Settings OAuth sign-out, manual key preserved")
-    }
-
     // ── Onboarding helpers ──
 
     private fun handleOnboardingEffect(effect: OnboardingEffect) {
@@ -974,7 +898,6 @@ class MainActivity : ComponentActivity() {
         // Any stored cloud credential indicates prior use.
         val providers = listOf(
             LLMProvider.OPENAI_API,
-            LLMProvider.OPENAI_CODEX,
             LLMProvider.OPENROUTER,
         )
         if (providers.any { authStore.has(it) }) return true

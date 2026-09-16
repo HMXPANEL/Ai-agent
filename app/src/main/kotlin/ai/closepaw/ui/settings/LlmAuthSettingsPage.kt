@@ -58,7 +58,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 
-enum class LlmAuthTab { SIGN_IN, API_KEY, LOCAL }
+enum class LlmAuthTab { API_KEY, LOCAL }
 
 /**
  * Surface the Local tab in LLM & Authentication settings.
@@ -79,20 +79,17 @@ private fun LlmAuthTab.visibleOrFallback(): LlmAuthTab =
 
 private val LlmAuthTab.label: String
     get() = when (this) {
-        LlmAuthTab.SIGN_IN -> "Sign In"
         LlmAuthTab.API_KEY -> "API Key"
         LlmAuthTab.LOCAL -> "Local"
     }
 
 private val LlmAuthTab.mode: AuthMode
     get() = when (this) {
-        LlmAuthTab.SIGN_IN -> AuthMode.OAuth
         LlmAuthTab.API_KEY -> AuthMode.ApiKey
         LlmAuthTab.LOCAL -> AuthMode.Local
     }
 
 private fun AuthMode.toTab(): LlmAuthTab = when (this) {
-    AuthMode.OAuth -> LlmAuthTab.SIGN_IN
     AuthMode.ApiKey -> LlmAuthTab.API_KEY
     AuthMode.Local -> LlmAuthTab.LOCAL
 }
@@ -100,7 +97,6 @@ private fun AuthMode.toTab(): LlmAuthTab = when (this) {
 /** Default provider per tab when the current selected model's mode doesn't match the tab. */
 private val LlmAuthTab.defaultProvider: LLMProvider
     get() = when (this) {
-        LlmAuthTab.SIGN_IN -> LLMProvider.OPENAI_CODEX
         LlmAuthTab.API_KEY -> LLMProvider.OPENAI_API
         LlmAuthTab.LOCAL -> LLMProvider.LOCAL_LFM
     }
@@ -118,13 +114,8 @@ internal fun LlmAuthSettingsPage(
     selectedLocalModel: String,
     onLocalModelChange: (LocalModelOption) -> Unit,
     modelLoadingStatus: ModelLoadingStatus,
-    openAiAuthUiState: OpenAiAuthUiState,
-    onStartOAuth: () -> Unit,
-    onCancelOAuth: () -> Unit,
-    onSignOut: () -> Unit,
     onBack: () -> Unit,
     onClose: () -> Unit,
-    initialAuthTab: AuthMode? = null,
     initialProvider: LLMProvider? = null,
     otherBaseUrl: String = "",
     otherModelId: String = "",
@@ -137,7 +128,6 @@ internal fun LlmAuthSettingsPage(
     var selectedTab by rememberSaveable(initialAuthTab, modelMode, llmBackend) {
         val raw = when {
             initialAuthTab != null -> initialAuthTab.toTab()
-            modelMode == AuthMode.OAuth -> LlmAuthTab.SIGN_IN
             llmBackend == LLMBackendType.LOCAL -> LlmAuthTab.LOCAL
             else -> LlmAuthTab.API_KEY
         }
@@ -160,19 +150,6 @@ internal fun LlmAuthSettingsPage(
     val pendingOtherModelIdPersist = remember { arrayOf<Job?>(null) }
 
     // Commit wrappers — called on real user actions inside tab content, NOT on tab tap.
-    fun commitSignIn(action: () -> Unit) {
-        onBackendChange(LLMBackendType.OPENAI)
-        val target = resolveProviderForTab(LlmAuthTab.SIGN_IN, selectedModel, modelCatalog)
-        canonicalizeMainModel(
-            modelCatalog = modelCatalog,
-            provider = target,
-            api = null,
-            selectedModel = selectedModel,
-            onModelChange = onModelChange
-        )
-        action()
-    }
-
     fun commitApiKey(action: () -> Unit) {
         onBackendChange(LLMBackendType.OPENAI)
         action()
@@ -203,18 +180,6 @@ internal fun LlmAuthSettingsPage(
                 .padding(start = MaterialTheme.closePaw.spacing.lg, end = MaterialTheme.closePaw.spacing.lg, top = MaterialTheme.closePaw.spacing.lg)
         ) {
             when (activeTab) {
-                LlmAuthTab.SIGN_IN -> SignInTabContent(
-                    selectedModel = selectedModel,
-                    onModelChange = { commitSignIn { onModelChange(it) } },
-                    modelCatalog = modelCatalog,
-                    openAiAuthUiState = openAiAuthUiState,
-                    onStartOAuth = { commitSignIn { onStartOAuth() } },
-                    onCancelOAuth = onCancelOAuth,
-                    onSignOut = {
-                        scope.launch { authStore.clear(LLMProvider.OPENAI_CODEX) }
-                        onSignOut()
-                    }
-                )
                 LlmAuthTab.API_KEY -> ApiKeyTabContent(
                     selectedModel = selectedModel,
                     onModelChange = { commitApiKey { onModelChange(it) } },
@@ -320,38 +285,6 @@ internal fun launchDebouncedPersist(
     pending[0] = scope.launch {
         delay(debounceMs)
         action()
-    }
-}
-
-@Composable
-private fun SignInTabContent(
-    selectedModel: String,
-    onModelChange: (String) -> Unit,
-    modelCatalog: ModelCatalog,
-    openAiAuthUiState: OpenAiAuthUiState,
-    onStartOAuth: () -> Unit,
-    onCancelOAuth: () -> Unit,
-    onSignOut: () -> Unit
-) {
-    // Canonical provider for this tab: selected model if OAuth-mode, else OPENAI_CODEX.
-    val provider = resolveProviderForTab(LlmAuthTab.SIGN_IN, selectedModel, modelCatalog)
-    val modelOptions = catalogModelOptions(modelCatalog.modelsFor(provider))
-
-    SettingsSection(title = "Cloud Model") {
-        CloudModelDropdown(
-            selectedModel = selectedModel,
-            modelOptions = modelOptions,
-            onModelChange = onModelChange
-        )
-    }
-    Spacer(modifier = Modifier.height(20.dp))
-    SettingsSection(title = "Authentication") {
-        OpenAiAuthCard(
-            state = openAiAuthUiState,
-            onStartOAuth = onStartOAuth,
-            onCancelOAuth = onCancelOAuth,
-            onSignOut = onSignOut
-        )
     }
 }
 
@@ -491,7 +424,7 @@ private fun ApiKeyTabContent(
             LLMProvider.OPENAI_API -> "OpenAI Key"
             LLMProvider.OPENROUTER -> "OpenRouter Key"
             LLMProvider.OTHER -> "API Key"
-            LLMProvider.OPENAI_CODEX, LLMProvider.LOCAL_LFM -> null
+            LLMProvider.LOCAL_LFM -> null
         }
         if (label != null) {
             ApiKeyField(

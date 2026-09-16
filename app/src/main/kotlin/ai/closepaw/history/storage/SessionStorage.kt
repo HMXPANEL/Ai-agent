@@ -16,26 +16,35 @@ import java.time.format.DateTimeFormatter
 /**
  * Low-level storage operations for session files.
  * 
- * Files are stored in: /data/data/{package}/files/sessions/
+ * Files are stored in a configurable directory (default: app-private files/sessions/,
+ * but can be overridden for persistent storage via ClosePawStorage).
  * File naming: session-{yyyy-MM-ddTHH-mm-ss}-{uuid_8chars}.json
  * 
  * This class handles all file I/O operations and is the only component
  * that should directly interact with the filesystem for session data.
  */
 class SessionStorage(
-    private val context: Context,
+    private val sessionsDir: File,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     
     companion object {
         private const val TAG = "SessionStorage"
-        private const val SESSIONS_DIR = "sessions"
         private const val SESSION_PREFIX = "session-"
         private const val CONTEXT_PREFIX = "context-"
         private const val SESSION_SUFFIX = ".json"
         
         // DateTimeFormatter is thread-safe unlike SimpleDateFormat
         private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH-mm-ss")
+        
+        /**
+         * Create a SessionStorage with app-private sessions directory (legacy/default).
+         */
+        @JvmStatic
+        fun createDefault(context: Context, ioDispatcher: CoroutineDispatcher = Dispatchers.IO): SessionStorage {
+            val dir = File(context.filesDir, "sessions")
+            return SessionStorage(dir, ioDispatcher)
+        }
     }
     
     private val json = Json {
@@ -48,12 +57,11 @@ class SessionStorage(
      * Get the sessions directory, creating if needed.
      */
     fun getSessionsDir(): File {
-        val dir = File(context.filesDir, SESSIONS_DIR)
-        if (!dir.exists()) {
-            dir.mkdirs()
-            Log.d(TAG, "Created sessions directory: ${dir.absolutePath}")
+        if (!sessionsDir.exists()) {
+            sessionsDir.mkdirs()
+            Log.d(TAG, "Created sessions directory: ${sessionsDir.absolutePath}")
         }
-        return dir
+        return sessionsDir
     }
     
     /**

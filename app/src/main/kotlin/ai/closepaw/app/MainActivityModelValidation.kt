@@ -61,7 +61,6 @@ internal fun findMissingCloudKeys(
     if (authStore.has(provider)) return emptyList()
 
     val label = when (provider) {
-        LLMProvider.OPENAI_CODEX -> "ChatGPT sign-in required"
         LLMProvider.OPENAI_API -> "OpenAI API key required"
         LLMProvider.OPENROUTER -> "OpenRouter API key required"
         LLMProvider.OTHER -> "API key required"

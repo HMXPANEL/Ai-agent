@@ -9,7 +9,6 @@ import ai.closepaw.llm.LFMLLMClient
 import ai.closepaw.llm.LLMClient
 import ai.closepaw.llm.LLMClientFactory
 import ai.closepaw.llm.LLMProvider
-import ai.closepaw.llm.CodexResponseClient
 import ai.closepaw.llm.LocalLLMConfig
 import ai.closepaw.llm.ModelCatalog
 import ai.closepaw.llm.ModelCatalogRepository
@@ -61,12 +60,7 @@ internal object SessionLlmBootstrapper {
                         val entry = modelCatalog.resolveOrNull(config.mainModel)
                         checkProviderRouting(config.provider, entry)
                         if (entry != null) {
-                            val loggedBaseUrl =
-                                if (entry.provider == LLMProvider.OPENAI_CODEX) {
-                                    CodexResponseClient.CODEX_URL
-                                } else {
-                                    entry.effectiveBaseUrl
-                                }
+                            val loggedBaseUrl = entry.effectiveBaseUrl
                             Log.i(
                                 TAG,
                                 formatRoutingLine(

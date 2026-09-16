@@ -207,7 +207,7 @@ class SessionCoordinator(private val scope: CoroutineScope) {
     /**
      * Shutdown and clear the current session.
      */
-    suspend fun clearSession() {
+    suspend fun clearSession(context: Context) {
         mutex.lock()
         try {
             val session = currentSession ?: return
@@ -220,6 +220,12 @@ class SessionCoordinator(private val scope: CoroutineScope) {
             }
             teardownLocked()
             lastDeadSessionFileName = null
+            // Auto-backup on session end
+            scope.launch(Dispatchers.IO) {
+                ClosePawStorage.getInstance(context).run {
+                    BackupManager(context, this).autoBackupIfNeeded()
+                }
+            }
         } finally {
             mutex.unlock()
         }

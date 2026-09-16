@@ -14,6 +14,7 @@ import ai.closepaw.auth.AuthStore
 import ai.closepaw.browser.script.BrowserSessionManager
 import ai.closepaw.history.HistoryManager
 import ai.closepaw.history.SessionRecordingService
+import ai.closepaw.history.storage.SessionStorage
 import ai.closepaw.llm.LLMClient
 import ai.closepaw.llm.LLMClientFactory
 import ai.closepaw.llm.LLMProvider
@@ -24,6 +25,7 @@ import ai.closepaw.memory.MemoryStore
 import ai.closepaw.platform.AndroidPlatform
 import ai.closepaw.protocol.SessionConfig
 import ai.closepaw.protocol.SessionLlmConfig
+import ai.closepaw.storage.ClosePawStorage
 import ai.closepaw.termux.TermuxBridgeManager
 import ai.closepaw.termux.TermuxBridgeStatus
 import ai.closepaw.termux.TermuxCapabilitySnapshot
@@ -138,7 +140,8 @@ class SessionServices internal constructor(
                 context: Context,
                 scope: CoroutineScope,
                 traceRecorder: TraceRecorder,
-                appClassifier: AppClassifier
+                appClassifier: AppClassifier,
+                closePawStorage: ClosePawStorage = ClosePawStorage.getInstance(context)
         ): SessionServices {
             Log.d(TAG, "Creating SessionServices...")
 
@@ -155,7 +158,7 @@ class SessionServices internal constructor(
             val llmClient: LLMClient = llmBootstrap.llmClient
             Log.d(TAG, "Created LLMClient: ${llmClient.javaClass.simpleName}")
 
-            val skillsDir = java.io.File(context.filesDir, "skills")
+            val skillsDir = closePawStorage.skillsDir
             installBundledAgentSkills(context, skillsDir)
             val settingsStore = AppSettingsStore(context)
             val hmxDiagnostics = HmxDiagnostics.create(
@@ -205,15 +208,14 @@ class SessionServices internal constructor(
                         ToolName.BrowserScript.raw in effectiveExcludedTools,
             )
 
-            val history = SessionHistoryBootstrapper.create(context, scope)
+            val history = SessionHistoryBootstrapper.create(context, scope, closePawStorage)
             val historyManager = history.historyManager
             val recordingService = history.recordingService
             val appSkillRepository = AssetAppSkillRepository(context.assets)
 
             // Memory system — eval hygiene is handled by the eval bridge clearing files/memory
             // before each task launch.
-            val memoryDir = java.io.File(context.filesDir ?: java.io.File("/tmp"), "memory")
-            val memoryStore = MemoryStore(memoryDir)
+            val memoryStore = MemoryStore(closePawStorage.memoryDir)
             val memoryRecaller = MemoryRecaller(memoryStore)
             toolRegistry.register(RememberExperienceTool(memoryStore, appClassifier))
 

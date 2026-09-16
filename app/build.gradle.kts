@@ -148,17 +148,13 @@ afterEvaluate {
     }
     tasks.findByName("mergeDebugAssets")?.dependsOn("licenseDebugReport")
 
-    // Kotlin 2.3.0's `produceReleaseComposeMapping` ships an older ASM that
-    // can't read class file major version 69 (Java 25). bcprov-jdk18on:1.84
-    // bundles `META-INF/versions/25/*.class` in its multi-release jar, which
-    // crashes the mapping task. The mapping file is debug-only metadata for
-    // Compose-aware stack traces — skipping the whole pipeline (produce →
-    // merge → report) doesn't affect APK contents.
-    listOf(
-        "produceReleaseComposeMapping",
-        "mergeReleaseComposeMapping",
-        "reportReleaseComposeMappingErrors",
-    ).forEach { tasks.findByName(it)?.enabled = false }
+    // Exclude Java 25 class files from BouncyCastle multi-release JAR that
+    // crash the Compose mapping task (ASM can't read class file major version 69).
+    packaging {
+        resources {
+            excludes += "META-INF/versions/25/**"
+        }
+    }
 }
 
 // Kotlin 2.3.0 compilerOptions DSL (replaces deprecated kotlinOptions)
@@ -200,7 +196,7 @@ dependencies {
     // OpenAI SDK
     implementation("com.openai:openai-java:4.14.0")
 
-    // OkHttp — used by CodexResponseClient for raw SSE streaming to chatgpt.com
+    // OkHttp — used by various HTTP clients (OpenAI SDK, etc.)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     
     // LiquidAI Leap SDK for local LLM inference

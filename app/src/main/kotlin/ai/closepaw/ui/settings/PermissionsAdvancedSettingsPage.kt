@@ -43,6 +43,7 @@ import ai.closepaw.BuildConfig
 import ai.closepaw.ui.theme.Fleuron
 import ai.closepaw.ui.theme.PageMastheadDrillDown
 import ai.closepaw.ui.theme.closePaw
+import ai.closepaw.storage.ClosePawStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
@@ -179,9 +180,11 @@ private fun DataStorageSection(
     fun clearSessions() {
         if (sessionClearState is ClearDataState.Clearing) return
         sessionClearState = ClearDataState.Clearing
+        val closePawStorage = ClosePawStorage.getInstance(LocalContext.current)
         scope.launch {
             sessionClearState = withContext(Dispatchers.IO) {
-                clearDirectory(File(context.filesDir, SESSIONS_DIR), label = "session history")
+                clearDirectory(closePawStorage.sessionsDir, label = "session history")
+                clearDirectory(closePawStorage.memoryDir, label = "memory")
             }
         }
     }

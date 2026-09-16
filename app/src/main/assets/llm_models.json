@@ -6,13 +6,6 @@
     "model_id": "gpt-5.2",
     "context_window": 400000
   },
-  "gpt-5.2-codex": {
-    "display_name": "GPT-5.2 (ChatGPT sign-in)",
-    "provider": "OPENAI_CODEX",
-    "api": "response",
-    "model_id": "gpt-5.2",
-    "context_window": 400000
-  },
   "glm-5": {
     "display_name": "GLM-5",
     "provider": "OPENROUTER",
@@ -51,13 +44,6 @@
   "gpt-5.4": {
     "display_name": "GPT-5.4",
     "provider": "OPENAI_API",
-    "api": "response",
-    "model_id": "gpt-5.4",
-    "context_window": 400000
-  },
-  "gpt-5.4-codex": {
-    "display_name": "GPT-5.4 (ChatGPT sign-in)",
-    "provider": "OPENAI_CODEX",
     "api": "response",
     "model_id": "gpt-5.4",
     "context_window": 400000

@@ -7,6 +7,7 @@ import ai.closepaw.history.HistoryManager
 import ai.closepaw.history.SessionRecordingService
 import ai.closepaw.history.TruncationPolicy
 import ai.closepaw.history.storage.SessionStorage
+import ai.closepaw.storage.ClosePawStorage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
@@ -19,14 +20,14 @@ internal data class SessionHistoryBootstrap(
 internal object SessionHistoryBootstrapper {
     private const val TAG = "SessionHistoryBootstrap"
 
-    fun create(context: Context, scope: CoroutineScope): SessionHistoryBootstrap {
+    fun create(context: Context, scope: CoroutineScope, closePawStorage: ClosePawStorage): SessionHistoryBootstrap {
         val historyConfig =
                 HistoryConfig(
                         defaultTruncationPolicy = TruncationPolicy.AGGRESSIVE,
                 )
         val historyManager = HistoryManager(historyConfig)
 
-        val storage = SessionStorage(context, Dispatchers.IO)
+        val storage = SessionStorage(closePawStorage.sessionsDir, Dispatchers.IO)
         val recordingService = SessionRecordingService(storage, scope)
 
         Log.d(TAG, "Created history stack (truncation=${historyConfig.defaultTruncationPolicy})")

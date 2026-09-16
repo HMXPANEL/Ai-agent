@@ -20,6 +20,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.RemoveCircleOutline
 import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -28,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -122,6 +124,10 @@ private fun ActionButtonCluster(
     val actionModifier =
         if (requiredActionsOnly) Modifier.minimumInteractiveComponentSize() else Modifier
     val spacing = MaterialTheme.closePaw.spacing.sm
+    
+    // State for "Always" approval confirmation dialog
+    var showAlwaysConfirmDialog by remember { mutableStateOf(false) }
+    
     val actionButtons: @Composable () -> Unit = {
         buttons.primary?.let { btn ->
             FilledTonalButton(
@@ -130,9 +136,10 @@ private fun ActionButtonCluster(
                         is CapsuleMode.Running -> onTakeover()
                         is CapsuleMode.Takeover -> onResume()
                         is CapsuleMode.WaitingForAction -> onDone(mode.callId)
-                        is CapsuleMode.WaitingForApproval -> onApprovalResponse(
-                            mode.callId, ApprovalDecision.APPROVED, ApprovalScope.ALWAYS, mode.packageName,
-                        )
+                        is CapsuleMode.WaitingForApproval -> {
+                            // Show confirmation dialog for "Always" scope
+                            showAlwaysConfirmDialog = true
+                        }
                         else -> {}
                     }
                 },
@@ -212,6 +219,36 @@ private fun ActionButtonCluster(
         ) {
             actionButtons()
         }
+    }
+    
+    // Confirmation dialog for "Always" approval scope
+    if (showAlwaysConfirmDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showAlwaysConfirmDialog = false },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        mode as? CapsuleMode.WaitingForApproval?.let { m ->
+                            onApprovalResponse(m.callId, ApprovalDecision.APPROVED, ApprovalScope.ALWAYS, m.packageName)
+                        }
+                        showAlwaysConfirmDialog = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                ) {
+                    Text("Confirm")
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = { showAlwaysConfirmDialog = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+                ) {
+                    Text("Cancel")
+                }
+            },
+            title = { Text("Allow always?") },
+            text = { Text("This will allow ClosePaw to operate ${mode.appLabel} without asking again. You can revoke this in Settings.") },
+        )
     }
 }
 

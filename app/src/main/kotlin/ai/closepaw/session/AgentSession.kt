@@ -13,6 +13,7 @@ import ai.closepaw.platform.AndroidPlatform
 import ai.closepaw.platform.OverlayTouchGate
 import ai.closepaw.platform.PlatformFactory
 import ai.closepaw.protocol.*
+import ai.closepaw.storage.ClosePawStorage
 import ai.closepaw.tool.AppClassifierHolder
 import ai.closepaw.trace.TraceRecorderFactory
 import ai.closepaw.ui.overlay.visualizer.ActionVisualizerManager
@@ -25,8 +26,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -66,6 +65,7 @@ private constructor(
                 baseUrlOverrides: Map<ai.closepaw.llm.LLMProvider, String> = emptyMap(),
                 visualizer: ActionVisualizerManager? = null,
                 overlayTouchGate: OverlayTouchGate? = null,
+                closePawStorage: ClosePawStorage = ClosePawStorage.getInstance(service)
         ): AgentSession {
             val sessionId = SessionId.generate()
             val traceRecorder = TraceRecorderFactory.create(service, config, sessionId)
@@ -88,7 +88,8 @@ private constructor(
                             context = service,
                             scope = scope,
                             traceRecorder = traceRecorder,
-                            appClassifier = appClassifier
+                            appClassifier = appClassifier,
+                            closePawStorage = closePawStorage
                     )
 
             return AgentSession(
@@ -143,6 +144,7 @@ private constructor(
                 overrideProvider: ai.closepaw.llm.LLMProvider? = null,
                 overrideBackend: ai.closepaw.protocol.LLMBackendType? = null,
                 overrideLocalConfig: ai.closepaw.llm.LocalLLMConfig? = null,
+                closePawStorage: ClosePawStorage = ClosePawStorage.getInstance(service)
         ): AgentSession? {
             if (snapshot.schemaVersion != 2) {
                 Log.w(TAG, "Session from previous version — start a new session. (schema=${snapshot.schemaVersion})")
@@ -195,7 +197,8 @@ private constructor(
                             context = service,
                             scope = scope,
                             traceRecorder = traceRecorder,
-                            appClassifier = appClassifier
+                            appClassifier = appClassifier,
+                            closePawStorage = closePawStorage
                     )
 
             val historyItems = HistoryItemConverter.fromRecords(snapshot.historyItems)

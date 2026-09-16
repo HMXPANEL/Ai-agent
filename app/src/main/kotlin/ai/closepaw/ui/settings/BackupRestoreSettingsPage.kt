@@ -1,11 +1,8 @@
 package ai.closepaw.ui.settings
 
-import ai.closepaw.history.BackupMediaMirror
-import ai.closepaw.history.ChatBackup
-import ai.closepaw.history.ChatBackup.BackupReport
-import ai.closepaw.history.ChatPersistenceManager
 import ai.closepaw.app.AppSettingsStore
-import ai.closepaw.history.storage.SessionStorage
+import ai.closepaw.storage.BackupManager
+import ai.closepaw.storage.ClosePawStorage
 import ai.closepaw.ui.settings.SettingsCard
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
@@ -33,11 +30,8 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
-import java.io.ByteArrayInputStream
-import androidx.compose.ui.platform.LocalContext
+import java.io.File
 import androidx.compose.ui.Modifier
-import ai.closepaw.ui.settings.SettingsCard
 import ai.closepaw.ui.theme.PageMastheadDrillDown
 import ai.closepaw.ui.theme.closePaw
 
@@ -51,17 +45,16 @@ internal fun BackupRestoreSettingsPage(
     onDismiss: () -> Unit = onClose,
 ) {
     val scope = remember { lifecycleScope }
-    val persistenceManager = remember { ChatPersistenceManager(SessionStorage(context), AppSettingsStore(context)) }
-    val mirror = remember { BackupMediaMirror(context) }
+    val closePawStorage = remember { ClosePawStorage.getInstance(context) }
+    val backupManager = remember { BackupManager(context, closePawStorage) }
 
     var showExportDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     var showResultDialog by remember { mutableStateOf(false) }
     var resultMessage by remember { mutableStateOf("") }
 
-    val exportReport by remember { mutableStateOf<ChatPersistenceManager.ExportReport?>(null) }
-    val restoreReport by remember { mutableStateOf<ChatPersistenceManager.RestoreReport?>(null) }
-    val verifyReport by remember { mutableStateOf<ChatBackup.BackupReport?>(null) }
+    val exportReport by remember { mutableStateOf<BackupManager.BackupReport?>(null) }
+    val restoreReport by remember { mutableStateOf<BackupManager.RestoreReport?>(null) }
 
     val lastExportedCount by remember { mutableStateOf<Int?>(null) }
     val lastRestoredCount by remember { mutableStateOf<Int?>(null) }
@@ -82,7 +75,7 @@ internal fun BackupRestoreSettingsPage(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.closePaw.spacing.sm)) {
                     Text(
-                        text = "Create a portable backup file containing your chat history and non-secret settings (model, provider, URLs). The backup is a versioned, checksummed JSON file saved to your Downloads folder.",
+                        text = "Create a portable backup file containing your chat history and non-secret settings (model, provider, URLs). The backup is a versioned, checksummed JSON file saved to Internal Storage/ClosePaw/backups/.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.fillMaxWidth()
@@ -94,12 +87,12 @@ internal fun BackupRestoreSettingsPage(
                         FilledTonalButton(
                             onClick = {
                                 scope.launch {
-                                    val out = ByteArrayOutputStream()
                                     val report = withContext(Dispatchers.IO) {
-                                        val persistence = ChatPersistenceManager(SessionStorage(LocalContext.current), AppSettingsStore(LocalContext.current))
-                                        persistence.exportBackup(out)
+                                        backupManager.createBackup()
                                     }
                                     lastExportedCount.value = report.sessionCount
+                                    resultMessage = "Exported ${report.sessionCount} sessions"
+                                    showResultDialog = true
                                 }
                             },
                             modifier = Modifier.weight(1f)
@@ -114,7 +107,7 @@ internal fun BackupRestoreSettingsPage(
             SettingsCard {
                 Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.closePaw.spacing.sm)) {
                     Text(
-                        text = "Import a backup file from your Downloads folder. Only new or newer sessions are added — existing newer data is never overwritten.",
+                        text = "Import a backup file from Internal Storage/ClosePaw/backups/. Only new or newer sessions are added — existing newer data is never overwritten.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.fillMaxWidth()
@@ -124,7 +117,7 @@ internal fun BackupRestoreSettingsPage(
                         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.closePaw.spacing.sm)
                     ) {
                         FilledTonalButton(
-                            onClick = { /* showImportDialog = true */ },
+                            onClick = { showImportDialog = true },
                             modifier = Modifier.weight(1f)
                         ) {
                             Text("Select Backup File")
@@ -137,11 +130,70 @@ internal fun BackupRestoreSettingsPage(
             SettingsCard {
                 Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.closePaw.spacing.sm)) {
                     Text(
-                        text = "When you uninstall and reinstall HMX, your chats will automatically restore from the most recent backup in Downloads — but only if the local store is empty. Your current chats are never overwritten.",
+                        text = "When you uninstall and reinstall HMX, your chats will automatically restore from the most recent backup in Internal Storage/ClosePaw/backups/ — but only if the local store is empty. Your current chats are never overwritten.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+            }
+
+            // Backup list
+            SettingsCard {
+                Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.closePaw.spacing.sm)) {
+                    Text(
+                        text = "Available Backups",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    val backups = remember { mutableStateOf(backupManager.listBackups()) }
+                    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.closePaw.spacing.xs)) {
+                        backups.value.forEach { backup ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Backup: ${backup.file.name}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "${backup.sessionCount} sessions · ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm").format(java.util.Date(backup.timestamp))}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    )
+                                }
+                                FilledTonalButton(
+                                    onClick = {
+                                        scope.launch {
+                                            val report = withContext(Dispatchers.IO) {
+                                                backupManager.restoreBackup(backup.file)
+                                            }
+                                            if (report.success) {
+                                                lastRestoredCount.value = report.restoredCount
+                                                resultMessage = "Restored ${report.restoredCount} sessions"
+                                            } else {
+                                                resultMessage = "Restore failed: ${report.errorMessage}"
+                                            }
+                                            showResultDialog = true
+                                            backups.value = backupManager.listBackups()
+                                        }
+                                    }
+                                ) {
+                                    Text("Restore")
+                                }
+                            }
+                        }
+                        if (backups.value.isEmpty()) {
+                            Text(
+                                text = "No backups found",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -155,6 +207,11 @@ internal fun BackupRestoreSettingsPage(
                     )
                     Text(
                         text = "Secrets (API keys, OAuth tokens) are NEVER included in backups",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                    Text(
+                        text = "Location: Internal Storage/ClosePaw/backups/ (survives uninstall)",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
