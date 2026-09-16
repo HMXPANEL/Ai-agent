@@ -75,7 +75,7 @@ android {
         aidl = true  // Required for Shizuku AIDL
     }
 
-    packaging {
+    packagingOptions {
         resources {
             excludes += "META-INF/DEPENDENCIES"
             excludes += "META-INF/LICENSE"
@@ -150,7 +150,7 @@ afterEvaluate {
 
     // Exclude Java 25 class files from BouncyCastle multi-release JAR that
     // crash the Compose mapping task (ASM can't read class file major version 69).
-    packaging {
+    packagingOptions {
         resources {
             excludes += "META-INF/versions/25/**"
         }
