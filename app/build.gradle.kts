@@ -88,6 +88,9 @@ android {
             excludes += "META-INF/notice.txt"
             excludes += "META-INF/ASL2.0"
             excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+            // Exclude Java 25 class files from BouncyCastle multi-release JAR that
+            // crash the Compose mapping task (ASM can't read class file major version 69).
+            excludes += "META-INF/versions/25/**"
         }
     }
     
@@ -147,14 +150,6 @@ afterEvaluate {
         )
     }
     tasks.findByName("mergeDebugAssets")?.dependsOn("licenseDebugReport")
-
-    // Exclude Java 25 class files from BouncyCastle multi-release JAR that
-    // crash the Compose mapping task (ASM can't read class file major version 69).
-    packagingOptions {
-        resources {
-            excludes += "META-INF/versions/25/**"
-        }
-    }
 }
 
 // Kotlin 2.3.0 compilerOptions DSL (replaces deprecated kotlinOptions)
