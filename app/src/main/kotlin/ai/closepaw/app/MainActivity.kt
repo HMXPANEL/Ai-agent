@@ -28,6 +28,7 @@ import ai.closepaw.auth.AuthCredential
 import ai.closepaw.auth.AuthStore
 import ai.closepaw.history.ResumedSessionData
 import ai.closepaw.history.SessionHistoryManager
+import ai.closepaw.history.storage.SessionStorage
 import ai.closepaw.history.model.SessionInfo
 import ai.closepaw.history.model.isReloadable
 import ai.closepaw.storage.ClosePawStorage
@@ -59,6 +60,7 @@ import ai.closepaw.ui.chat.ChatViewModel
 import ai.closepaw.ui.onboarding.OnboardingScreen
 import ai.closepaw.ui.overlay.visualizer.ActionVisualizerManager
 import ai.closepaw.ui.settings.ModelLoadingStatus
+import ai.closepaw.ui.settings.OpenAiAuthUiState
 import ai.closepaw.ui.theme.ClosePawTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -128,6 +130,7 @@ class MainActivity : ComponentActivity() {
     private var onboardingViewModel: OnboardingViewModel? = null
     private var onboardingRequired by mutableStateOf(false)
     private var pendingVoicePermissionRequest by mutableStateOf(false)
+    private var openAiAuthUiState by mutableStateOf<OpenAiAuthUiState>(OpenAiAuthUiState.SignedOut)
 
     internal fun isVoicePermissionRequestPending(): Boolean = pendingVoicePermissionRequest
 
@@ -894,6 +897,19 @@ class MainActivity : ComponentActivity() {
 
     /** Check for evidence this is an existing user (for onboarding migration). */
     private fun hasLegacyUsageEvidence(): Boolean {
+        val pref = preferencesOf(applicationContext).getBoolean("legacy_usage_evidence", false)
+        return pref
+    }
+
+    private fun deriveOpenAiAuthUiState() {
+        val cred = kotlinx.coroutines.runBlocking { authStore.get(LLMProvider.OPENAI_API) }
+        val oauthCred = cred as? AuthCredential.OAuth
+        openAiAuthUiState = if (oauthCred != null) {
+            ai.closepaw.ui.settings.OpenAiAuthUiState.SignedIn(oauthCred.email)
+        } else {
+            ai.closepaw.ui.settings.OpenAiAuthUiState.SignedOut
+        }
+    }
         val settings = settingsState
         // Any stored cloud credential indicates prior use.
         val providers = listOf(
