@@ -196,7 +196,7 @@ class MemoryEditGateTest {
         advanceUntilIdle()
         assertThat(gate.memoryEditLocked.value).isTrue()
 
-        coordinator.clearSession()
+        coordinator.clearSession(mockk<android.content.Context>(relaxed = true))
         advanceUntilIdle()
 
         assertThat(gate.memoryEditLocked.value).isFalse()

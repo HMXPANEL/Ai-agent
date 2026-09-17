@@ -43,7 +43,7 @@ class ChatPersistenceManagerTest {
 
     private fun manager(dir: java.io.File): ChatPersistenceManager {
         val ctx = contextFor(dir)
-        return ChatPersistenceManager(SessionStorage(ctx), AppSettingsStore(ctx))
+        return ChatPersistenceManager(SessionStorage.createDefault(ctx), AppSettingsStore(ctx))
     }
 
     private fun record(id: String, updated: Long, text: String) = SessionRecord(

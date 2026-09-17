@@ -424,6 +424,7 @@ private fun ApiKeyTabContent(
     SettingsSection(title = "API Key") {
         val label = when (selectedProvider) {
             LLMProvider.OPENAI_API -> "OpenAI Key"
+            LLMProvider.OPENAI_CODEX -> null
             LLMProvider.OPENROUTER -> "OpenRouter Key"
             LLMProvider.OTHER -> "API Key"
             LLMProvider.LOCAL_LFM -> null

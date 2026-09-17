@@ -28,7 +28,7 @@ class SessionRecordingServiceTest {
     fun `recordUserMessage persists after debounce`() = runTest {
         val context = buildTestContext(tempFolder.newFolder("files"))
         val ioDispatcher = StandardTestDispatcher(testScheduler)
-        val storage = SessionStorage(context, ioDispatcher)
+        val storage = SessionStorage.createDefault(context, ioDispatcher)
         val service = SessionRecordingService(storage, this)
 
         service.initializeNewSession(model = "gpt-5.2", appVersion = "1.0")
@@ -49,7 +49,7 @@ class SessionRecordingServiceTest {
     fun `completeSession marks metadata and summary`() = runTest {
         val context = buildTestContext(tempFolder.newFolder("files"))
         val ioDispatcher = StandardTestDispatcher(testScheduler)
-        val storage = SessionStorage(context, ioDispatcher)
+        val storage = SessionStorage.createDefault(context, ioDispatcher)
         val service = SessionRecordingService(storage, this)
 
         service.initializeNewSession(model = "gpt-5.2", appVersion = "1.0")
@@ -75,7 +75,7 @@ class SessionRecordingServiceTest {
     fun `recordAction updates agent message blocks`() = runTest {
         val context = buildTestContext(tempFolder.newFolder("files"))
         val ioDispatcher = StandardTestDispatcher(testScheduler)
-        val storage = SessionStorage(context, ioDispatcher)
+        val storage = SessionStorage.createDefault(context, ioDispatcher)
         val service = SessionRecordingService(storage, this)
 
         service.initializeNewSession(model = "gpt-5.2", appVersion = "1.0")
@@ -113,7 +113,7 @@ class SessionRecordingServiceTest {
     fun `completeSession finalizes pending agent buffer before persisting metadata`() = runTest {
         val context = buildTestContext(tempFolder.newFolder("files"))
         val ioDispatcher = StandardTestDispatcher(testScheduler)
-        val storage = SessionStorage(context, ioDispatcher)
+        val storage = SessionStorage.createDefault(context, ioDispatcher)
         val service = SessionRecordingService(storage, this)
 
         service.initializeNewSession(model = "gpt-5.2", appVersion = "1.0")
@@ -139,7 +139,7 @@ class SessionRecordingServiceTest {
     fun `completeSession after ERROR task outcome marks completedNormally false`() = runTest {
         val context = buildTestContext(tempFolder.newFolder("files"))
         val ioDispatcher = StandardTestDispatcher(testScheduler)
-        val storage = SessionStorage(context, ioDispatcher)
+        val storage = SessionStorage.createDefault(context, ioDispatcher)
         val service = SessionRecordingService(storage, this)
 
         service.initializeNewSession(model = "gpt-5.2", appVersion = "1.0")
@@ -160,7 +160,7 @@ class SessionRecordingServiceTest {
     fun `completeSession without any task outcome marks completedNormally false`() = runTest {
         val context = buildTestContext(tempFolder.newFolder("files"))
         val ioDispatcher = StandardTestDispatcher(testScheduler)
-        val storage = SessionStorage(context, ioDispatcher)
+        val storage = SessionStorage.createDefault(context, ioDispatcher)
         val service = SessionRecordingService(storage, this)
 
         service.initializeNewSession(model = "gpt-5.2", appVersion = "1.0")
@@ -180,7 +180,7 @@ class SessionRecordingServiceTest {
     fun `recordUserMessage preserves finalized agent message`() = runTest {
         val context = buildTestContext(tempFolder.newFolder("files"))
         val ioDispatcher = StandardTestDispatcher(testScheduler)
-        val storage = SessionStorage(context, ioDispatcher)
+        val storage = SessionStorage.createDefault(context, ioDispatcher)
         val service = SessionRecordingService(storage, this)
 
         service.initializeNewSession(model = "gpt-5.2", appVersion = "1.0")
@@ -210,7 +210,7 @@ class SessionRecordingServiceTest {
     fun `clearSessionAndAwait completes before new session can be created`() = runTest {
         val context = buildTestContext(tempFolder.newFolder("files"))
         val ioDispatcher = StandardTestDispatcher(testScheduler)
-        val storage = SessionStorage(context, ioDispatcher)
+        val storage = SessionStorage.createDefault(context, ioDispatcher)
         val service = SessionRecordingService(storage, this)
 
         // Create and populate first session
@@ -244,7 +244,7 @@ class SessionRecordingServiceTest {
     fun `overlapping saves - later revision wins regardless of completion order`() = runTest {
         val context = buildTestContext(tempFolder.newFolder("files"))
         val ioDispatcher = StandardTestDispatcher(testScheduler)
-        val storage = SessionStorage(context, ioDispatcher)
+        val storage = SessionStorage.createDefault(context, ioDispatcher)
         val service = SessionRecordingService(storage, this)
 
         service.initializeNewSession(model = "test", appVersion = "1.0")
@@ -274,7 +274,7 @@ class SessionRecordingServiceTest {
     fun `forceCheckpoint preempts pending debounced checkpoint`() = runTest {
         val context = buildTestContext(tempFolder.newFolder("files"))
         val ioDispatcher = StandardTestDispatcher(testScheduler)
-        val storage = SessionStorage(context, ioDispatcher)
+        val storage = SessionStorage.createDefault(context, ioDispatcher)
         val service = SessionRecordingService(storage, this)
 
         service.initializeNewSession(model = "test", appVersion = "1.0")

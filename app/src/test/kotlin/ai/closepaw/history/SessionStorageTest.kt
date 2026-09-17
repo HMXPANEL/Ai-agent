@@ -24,7 +24,7 @@ class SessionStorageTest {
     fun `write and read session round trip`() = runTest {
         val context = buildTestContext(tempFolder.newFolder("files"))
         val ioDispatcher = StandardTestDispatcher(testScheduler)
-        val storage = SessionStorage(context, ioDispatcher)
+        val storage = SessionStorage.createDefault(context, ioDispatcher)
         val record = SessionRecord(
             sessionId = "session-1",
             startTime = 100L,
@@ -49,7 +49,7 @@ class SessionStorageTest {
     fun `listSessionFiles returns newest first`() = runTest {
         val context = buildTestContext(tempFolder.newFolder("files"))
         val ioDispatcher = StandardTestDispatcher(testScheduler)
-        val storage = SessionStorage(context, ioDispatcher)
+        val storage = SessionStorage.createDefault(context, ioDispatcher)
 
         val record1 = SessionRecord(
             sessionId = "s1",
@@ -83,7 +83,7 @@ class SessionStorageTest {
     fun `deleteSessionPair removes both session and context files`() = runTest {
         val context = buildTestContext(tempFolder.newFolder("files"))
         val ioDispatcher = StandardTestDispatcher(testScheduler)
-        val storage = SessionStorage(context, ioDispatcher)
+        val storage = SessionStorage.createDefault(context, ioDispatcher)
 
         val record =
             SessionRecord(
@@ -123,7 +123,7 @@ class SessionStorageTest {
     fun `writeSession uses atomic temp-file replacement`() = runTest {
         val context = buildTestContext(tempFolder.newFolder("files"))
         val ioDispatcher = StandardTestDispatcher(testScheduler)
-        val storage = SessionStorage(context, ioDispatcher)
+        val storage = SessionStorage.createDefault(context, ioDispatcher)
         val record = SessionRecord(
             sessionId = "atomic-test",
             startTime = 100L,

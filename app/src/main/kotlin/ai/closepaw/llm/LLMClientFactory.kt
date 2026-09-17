@@ -102,6 +102,11 @@ private fun build(entry: ModelEntry): LLMClient {
                         ApiType.CHAT ->
                                 ChatCompletionClient(entry, store.getApiKeyResult(LLMProvider.OPENAI_API).getOrThrow(), baseUrl)
                     }
+            LLMProvider.OPENAI_CODEX ->
+                    CodexResponseClient(
+                            entry = entry,
+                            headerSupplier = { store.codexHeaders(LLMProvider.OPENAI_CODEX) }
+                        )
             LLMProvider.OPENROUTER ->
                     ChatCompletionClient(entry, store.getApiKeyResult(LLMProvider.OPENROUTER).getOrThrow(), baseUrl)
             LLMProvider.OTHER -> {
@@ -144,6 +149,7 @@ internal fun checkClientMatchesEntry(entry: ModelEntry, client: LLMClient) {
         LLMProvider.OPENAI_API ->
             client is OpenAIResponseClient ||
                 (entry.api == ApiType.CHAT && client is ChatCompletionClient)
+        LLMProvider.OPENAI_CODEX -> client is CodexResponseClient
         LLMProvider.OPENROUTER, LLMProvider.OTHER -> client is ChatCompletionClient
         LLMProvider.LOCAL_LFM -> client is LFMLLMClient
     }

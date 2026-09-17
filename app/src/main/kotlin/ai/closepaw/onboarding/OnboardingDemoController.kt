@@ -187,7 +187,7 @@ class OnboardingDemoController(
                 withContext(Dispatchers.Main) {
                     onCredentialError(
                         "No ${e.provider.displayName()} credential found. Sign in again.",
-                        e.provider == LLMProvider.OPENAI_API,
+                        e.provider == LLMProvider.OPENAI_CODEX,
                     )
                 }
             } catch (e: OAuthRefreshFailed) {
@@ -203,7 +203,7 @@ class OnboardingDemoController(
                 withContext(Dispatchers.Main) {
                     onCredentialError(
                         "Credential mismatch for ${e.provider.displayName()}. Re-enter it.",
-                        e.provider == LLMProvider.OPENAI_API,
+                        e.provider == LLMProvider.OPENAI_CODEX,
                     )
                 }
             } catch (e: Exception) {
@@ -239,6 +239,7 @@ class OnboardingDemoController(
 
 private fun LLMProvider.displayName(): String = when (this) {
     LLMProvider.OPENAI_API -> "OpenAI"
+    LLMProvider.OPENAI_CODEX -> "OpenAI"
     LLMProvider.OPENROUTER -> "OpenRouter"
     LLMProvider.OTHER -> "Other"
     LLMProvider.LOCAL_LFM -> "Local"

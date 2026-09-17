@@ -23,7 +23,7 @@ class SessionHistoryManagerTest {
     fun `listSessions returns active session and load works`() = runTest {
         val context = buildTestContext(tempFolder.newFolder("files"))
         val ioDispatcher = StandardTestDispatcher(testScheduler)
-        val storage = SessionStorage(context, ioDispatcher)
+        val storage = SessionStorage.createDefault(context, ioDispatcher)
         val manager = SessionHistoryManager.create(storage, this)
 
         val sessionId = manager.startNewSession(model = "gpt-5.2", appVersion = "1.0")
@@ -48,7 +48,7 @@ class SessionHistoryManagerTest {
     fun `loadSession fails when session is missing`() = runTest {
         val context = buildTestContext(tempFolder.newFolder("files"))
         val ioDispatcher = StandardTestDispatcher(testScheduler)
-        val storage = SessionStorage(context, ioDispatcher)
+        val storage = SessionStorage.createDefault(context, ioDispatcher)
         val manager = SessionHistoryManager.create(storage, this)
 
         val result = manager.loadSession("missing-session")
@@ -60,7 +60,7 @@ class SessionHistoryManagerTest {
     fun `startNewSession preserves model and appVersion metadata`() = runTest {
         val context = buildTestContext(tempFolder.newFolder("files"))
         val ioDispatcher = StandardTestDispatcher(testScheduler)
-        val storage = SessionStorage(context, ioDispatcher)
+        val storage = SessionStorage.createDefault(context, ioDispatcher)
         val manager = SessionHistoryManager.create(storage, this)
 
         val sessionId = manager.startNewSession(model = "gpt-5.2", appVersion = "1.0")
@@ -80,7 +80,7 @@ class SessionHistoryManagerTest {
     fun `loadSession uses exact id match not substring`() = runTest {
         val context = buildTestContext(tempFolder.newFolder("files"))
         val ioDispatcher = StandardTestDispatcher(testScheduler)
-        val storage = SessionStorage(context, ioDispatcher)
+        val storage = SessionStorage.createDefault(context, ioDispatcher)
         val manager = SessionHistoryManager.create(storage, this)
 
         // Create two sessions with IDs where one is a substring of the other
@@ -107,7 +107,7 @@ class SessionHistoryManagerTest {
     fun `listSessions surfaces corrupted session file as placeholder`() = runTest {
         val context = buildTestContext(tempFolder.newFolder("files"))
         val ioDispatcher = StandardTestDispatcher(testScheduler)
-        val storage = SessionStorage(context, ioDispatcher)
+        val storage = SessionStorage.createDefault(context, ioDispatcher)
         val manager = SessionHistoryManager.create(storage, this)
 
         val sessionsDir = storage.getSessionsDir()

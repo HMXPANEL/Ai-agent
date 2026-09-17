@@ -224,10 +224,12 @@ class SessionCoordinator(private val scope: CoroutineScope) {
             }
             teardownLocked()
             lastDeadSessionFileName = null
-            // Auto-backup on session end
+            // Auto-backup on session end (best-effort: never fail shutdown on backup errors)
             scope.launch(Dispatchers.IO) {
-                ClosePawStorage.getInstance(context).run {
-                    BackupManager(context, this).autoBackupIfNeeded()
+                runCatching {
+                    ClosePawStorage.getInstance(context).run {
+                        BackupManager(context, this).autoBackupIfNeeded()
+                    }
                 }
             }
         } finally {

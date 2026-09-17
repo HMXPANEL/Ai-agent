@@ -155,7 +155,7 @@ class SessionCoordinatorTest {
         advanceUntilIdle()
 
         coordinator.enqueue("to-be-cleared")
-        coordinator.clearSession()
+        coordinator.clearSession(mockk<android.content.Context>(relaxed = true))
         advanceUntilIdle()
 
         coVerify { session.submit(Op.Shutdown) }
@@ -431,7 +431,7 @@ class SessionCoordinatorTest {
         coordinator.attachSession(session)
         advanceUntilIdle()
 
-        coordinator.clearSession()
+        coordinator.clearSession(mockk<android.content.Context>(relaxed = true))
         advanceUntilIdle()
 
         assertThat(coordinator.consumeDeadSessionFileName()).isNull()
@@ -452,7 +452,7 @@ class SessionCoordinatorTest {
         coordinator.attachSession(session)
         advanceUntilIdle()
 
-        coordinator.clearSession()
+        coordinator.clearSession(mockk<android.content.Context>(relaxed = true))
         advanceUntilIdle()
 
         assertThat(coordinator.currentSession).isNull()
@@ -624,7 +624,7 @@ class SessionCoordinatorTest {
         advanceUntilIdle()
         assertThat(coordinator.currentSessionState.value).isEqualTo(SessionState.Idle)
 
-        coordinator.clearSession()
+        coordinator.clearSession(mockk<android.content.Context>(relaxed = true))
         advanceUntilIdle()
 
         assertThat(coordinator.currentSessionState.value).isNull()
