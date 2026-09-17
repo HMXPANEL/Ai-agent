@@ -897,19 +897,6 @@ class MainActivity : ComponentActivity() {
 
     /** Check for evidence this is an existing user (for onboarding migration). */
     private fun hasLegacyUsageEvidence(): Boolean {
-        val pref = preferencesOf(applicationContext).getBoolean("legacy_usage_evidence", false)
-        return pref
-    }
-
-    private fun deriveOpenAiAuthUiState() {
-        val cred = kotlinx.coroutines.runBlocking { authStore.get(LLMProvider.OPENAI_API) }
-        val oauthCred = cred as? AuthCredential.OAuth
-        openAiAuthUiState = if (oauthCred != null) {
-            ai.closepaw.ui.settings.OpenAiAuthUiState.SignedIn(oauthCred.email)
-        } else {
-            ai.closepaw.ui.settings.OpenAiAuthUiState.SignedOut
-        }
-    }
         val settings = settingsState
         // Any stored cloud credential indicates prior use.
         val providers = listOf(
@@ -922,9 +909,19 @@ class MainActivity : ComponentActivity() {
         // User app overrides (persistent per-app policy)
         val overrides = AppSettingsStore(applicationContext).loadUserAppOverrides()
         if (overrides.isNotEmpty()) return true
-        // Session directory has files
-        val sessionsDir = java.io.File(applicationContext.filesDir, "sessions")
+        // Session directory has files (Phase 2 persistent storage)
+        val sessionsDir = closePawStorage.sessionsDir
         if (sessionsDir.exists() && (sessionsDir.listFiles()?.isNotEmpty() == true)) return true
         return false
+    }
+
+    private fun deriveOpenAiAuthUiState() {
+        val cred = kotlinx.coroutines.runBlocking { authStore.get(LLMProvider.OPENAI_API) }
+        val oauthCred = cred as? AuthCredential.OAuth
+        openAiAuthUiState = if (oauthCred != null) {
+            ai.closepaw.ui.settings.OpenAiAuthUiState.SignedIn(oauthCred.email)
+        } else {
+            ai.closepaw.ui.settings.OpenAiAuthUiState.SignedOut
+        }
     }
 }
