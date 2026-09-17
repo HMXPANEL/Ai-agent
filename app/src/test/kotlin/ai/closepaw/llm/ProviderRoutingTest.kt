@@ -79,6 +79,7 @@ class ProviderRoutingTest {
         val store = mockk<AuthStore>(relaxed = true)
         every { store.generation(any()) } returns 0L
         every { store.requireApiKey(any()) } returns "test-key"
+        every { store.getApiKeyResult(any()) } returns Result.success("test-key")
         coEvery { store.codexHeaders(any()) } returns
             CodexHeaders(
                 accessToken = "acc-token",
