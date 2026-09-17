@@ -227,8 +227,8 @@ private fun ActionButtonCluster(
             onDismissRequest = { showAlwaysConfirmDialog = false },
             confirmButton = {
                 androidx.compose.material3.TextButton(
-                    onClick = {
-                        mode as? CapsuleMode.WaitingForApproval?.let { m ->
+                    onClick = { _ ->
+                        mode?.let { m ->
                             onApprovalResponse(m.callId, ApprovalDecision.APPROVED, ApprovalScope.ALWAYS, m.packageName)
                         }
                         showAlwaysConfirmDialog = false
