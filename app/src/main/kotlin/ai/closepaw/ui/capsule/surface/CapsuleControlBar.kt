@@ -32,6 +32,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -222,15 +226,14 @@ private fun ActionButtonCluster(
     }
     
     // Confirmation dialog for "Always" approval scope
-    if (showAlwaysConfirmDialog) {
+    val approval = mode as? CapsuleMode.WaitingForApproval
+    if (showAlwaysConfirmDialog && approval != null) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showAlwaysConfirmDialog = false },
             confirmButton = {
                 androidx.compose.material3.TextButton(
-                    onClick = { _ ->
-                        mode?.let { m ->
-                            onApprovalResponse(m.callId, ApprovalDecision.APPROVED, ApprovalScope.ALWAYS, m.packageName)
-                        }
+                    onClick = {
+                        onApprovalResponse(approval.callId, ApprovalDecision.APPROVED, ApprovalScope.ALWAYS, approval.packageName)
                         showAlwaysConfirmDialog = false
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.primary),
@@ -247,7 +250,7 @@ private fun ActionButtonCluster(
                 }
             },
             title = { Text("Allow always?") },
-            text = { Text("This will allow ClosePaw to operate ${mode.appLabel} without asking again. You can revoke this in Settings.") },
+            text = { Text("This will allow ClosePaw to operate ${approval.appLabel} without asking again. You can revoke this in Settings.") },
         )
     }
 }
