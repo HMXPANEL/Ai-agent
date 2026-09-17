@@ -15,8 +15,9 @@
   REQUIRES_PERMISSION / allowlist∩available; overlay revocation re-snapshot;
   declaration + registry end-to-end (plus pre-existing manager/source/registry
   suites).
-- Build result: pending CI.
-- GitHub Actions result: pending.
+- Build result: `:app:assembleDebug` green.
+- GitHub Actions result: GREEN (unit-tests + debug-apk, run 35208861902).
+- Acceptance: PASSED — continuing to Phase 4.
 - Device validation: REQUIRED (real permission flips, Termux presence).
 - Known limitations: accessibility treated as available while the service runs
   (live arbiter arrives Phase 4); no execution-time re-check (advertisement

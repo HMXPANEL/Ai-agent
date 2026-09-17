@@ -116,7 +116,10 @@ class SessionServices internal constructor(
             ai.closepaw.trace.RuntimeEventBus(),
         /** Live device capabilities gating the LLM tool list (P10). */
         val capabilityManager: ai.closepaw.tool.CapabilityManager =
-            ai.closepaw.tool.CapabilityManager()
+            ai.closepaw.tool.CapabilityManager(),
+        /** Structured device-state snapshots for orchestration (P4). */
+        val deviceState: ai.closepaw.device.HmxDeviceStateProvider =
+            ai.closepaw.device.AndroidHmxDeviceStateProvider()
 ) {
     companion object {
         private const val TAG = "SessionServices"
@@ -221,6 +224,33 @@ class SessionServices internal constructor(
 
             Log.i(TAG, "SessionServices created successfully")
 
+            val capabilityManager = ai.closepaw.tool.CapabilityManager(
+                ai.closepaw.tool.AndroidDeviceCapabilitySource(
+                    appContext = context.applicationContext,
+                    termuxSnapshot = termuxSnapshot,
+                    accessibilityAvailable = true
+                )
+            )
+            val deviceState = ai.closepaw.device.AndroidHmxDeviceStateProvider(
+                foregroundPackage = {
+                    runCatching { platform.getCurrentPackageName() }.getOrNull()
+                },
+                accessibilityAvailable = {
+                    ai.closepaw.app.AgentService.instance != null
+                },
+                overlayGranted = {
+                    runCatching {
+                        android.provider.Settings.canDrawOverlays(context)
+                    }.getOrDefault(false)
+                },
+                capabilities = {
+                    runCatching { capabilityManager.snapshot() }.getOrDefault(emptyMap())
+                },
+                display = {
+                    runCatching { platform.getDisplayInfo() }.getOrNull()
+                },
+            )
+
             return SessionServices(
                     toolRegistry = toolRegistry,
                     toolRouter = toolRouter,
@@ -242,13 +272,8 @@ class SessionServices internal constructor(
                     memoryStore = memoryStore,
                     memoryRecaller = memoryRecaller,
                     hmxDiagnostics = hmxDiagnostics,
-                    capabilityManager = ai.closepaw.tool.CapabilityManager(
-                        ai.closepaw.tool.AndroidDeviceCapabilitySource(
-                            appContext = context.applicationContext,
-                            termuxSnapshot = termuxSnapshot,
-                            accessibilityAvailable = true
-                        )
-                    )
+                    capabilityManager = capabilityManager,
+                    deviceState = deviceState
             )
         }
 

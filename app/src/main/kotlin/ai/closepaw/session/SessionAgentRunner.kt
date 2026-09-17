@@ -63,6 +63,8 @@ internal class SessionAgentRunner(
     val completions = Channel<AgentStopReason>(capacity = Channel.BUFFERED)
 
     fun start(taskInput: String, taskId: String) {
+        // Fresh device state per task (bounded: one cached snapshot, re-read when stale).
+        runCatching { services.deviceState.refresh() }
         val agentDef = AgentDefRegistry.main
         // Read excludedTools from services.config — SessionServices.create stamps the user-pref
         // tool gates (e.g. browser_script when off) into that copy. The local `config` field is
