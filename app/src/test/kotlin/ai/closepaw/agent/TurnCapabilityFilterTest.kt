@@ -143,6 +143,76 @@ class TurnCapabilityFilterTest {
     }
 
     @Test
+    fun `temporarily unavailable hides declaring tool`() = runTest {
+        val llm = CapturingClient()
+        val registry = ToolRegistry().apply {
+            register(GatedTool("termux_shell", setOf(Capability.TERMUX_SHELL)))
+        }
+        val turn = Turn(
+            toolRegistry = registry,
+            llmClient = llm,
+            capabilityManager = managerOf(Capability.TERMUX_SHELL to CapabilityState.TEMPORARILY_UNAVAILABLE)
+        )
+
+        turn.run(systemPrompt = "planner", inputItems = minimalInputItems)
+
+        assertThat(llm.lastToolNames).isEmpty()
+    }
+
+    @Test
+    fun `requires approval hides declaring tool`() = runTest {
+        val llm = CapturingClient()
+        val registry = ToolRegistry().apply {
+            register(GatedTool("termux_shell", setOf(Capability.TERMUX_SHELL)))
+        }
+        val turn = Turn(
+            toolRegistry = registry,
+            llmClient = llm,
+            capabilityManager = managerOf(Capability.TERMUX_SHELL to CapabilityState.REQUIRES_USER_APPROVAL)
+        )
+
+        turn.run(systemPrompt = "planner", inputItems = minimalInputItems)
+
+        assertThat(llm.lastToolNames).isEmpty()
+    }
+
+    @Test
+    fun `requires permission hides declaring tool`() = runTest {
+        val llm = CapturingClient()
+        val registry = ToolRegistry().apply {
+            register(GatedTool("overlay_tool", setOf(Capability.OVERLAY)))
+        }
+        val turn = Turn(
+            toolRegistry = registry,
+            llmClient = llm,
+            capabilityManager = managerOf(Capability.OVERLAY to CapabilityState.REQUIRES_PERMISSION)
+        )
+
+        turn.run(systemPrompt = "planner", inputItems = minimalInputItems)
+
+        assertThat(llm.lastToolNames).isEmpty()
+    }
+
+    @Test
+    fun `presented tools are allowlist intersect available`() = runTest {
+        val llm = CapturingClient()
+        val registry = ToolRegistry().apply {
+            register(GatedTool("mobile_action", emptySet()))
+            register(GatedTool("termux_shell", setOf(Capability.TERMUX_SHELL)))
+        }
+        val turn = Turn(
+            toolRegistry = registry,
+            llmClient = llm,
+            allowedToolNames = setOf("termux_shell"),
+            capabilityManager = managerOf(Capability.TERMUX_SHELL to CapabilityState.AVAILABLE)
+        )
+
+        turn.run(systemPrompt = "planner", inputItems = minimalInputItems)
+
+        assertThat(llm.lastToolNames).containsExactly("termux_shell")
+    }
+
+    @Test
     fun `null manager preserves legacy allowlist-only behavior`() = runTest {
         val llm = CapturingClient()
         val registry = ToolRegistry().apply {

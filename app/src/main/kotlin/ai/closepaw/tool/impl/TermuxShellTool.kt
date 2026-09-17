@@ -4,6 +4,7 @@ import ai.closepaw.tool.ToolExecutionContext
 import ai.closepaw.tool.ToolExecutionResult
 import ai.closepaw.tool.ToolInvocation
 import ai.closepaw.tool.ToolObservation
+import ai.closepaw.tool.Capability
 import ai.closepaw.tool.ToolSpec
 import ai.closepaw.tool.ValidationResult
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +30,9 @@ class TermuxShellTool(
     private val bridgeBaseUrl: String = DEFAULT_BRIDGE_BASE_URL,
 ) : ToolSpec {
     override val name: String = "termux_shell"
+
+    /** Executes only through the Termux bridge — hidden from the LLM without it. */
+    override val requiredCapabilities: Set<Capability> = setOf(Capability.TERMUX_SHELL)
 
     override val description: String =
         """

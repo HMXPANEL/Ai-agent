@@ -18,9 +18,10 @@ import android.util.Log
  *
  * Honesty rules: capabilities with a real probe report real states; anything
  * without a probe reports UNKNOWN (fail-closed) rather than a guessed
- * AVAILABLE. Today no tool declares non-empty requirements, so wiring this in
- * changes no advertised list — it arms the mechanism and the states are
- * observable in diagnostics.
+ * AVAILABLE. Tools declaring ACCESSIBILITY/TERMUX_SHELL are filtered against
+ * the live probes below; BROWSER_CDP/SHIZUKU/VIRTUAL_DISPLAY/
+ * BACKGROUND_EXECUTION stay UNKNOWN until Phase 4 probes (no tool declares
+ * them yet, so nothing else is filtered).
  */
 class AndroidDeviceCapabilitySource(
     private val appContext: Context,

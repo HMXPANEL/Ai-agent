@@ -2,6 +2,7 @@ package ai.closepaw.tool.impl
 
 import ai.closepaw.platform.SystemButtonType
 import ai.closepaw.platform.UIAction
+import ai.closepaw.tool.Capability
 import ai.closepaw.tool.ToolInvocation
 import ai.closepaw.tool.ToolSpec
 import ai.closepaw.tool.ValidationResult
@@ -18,6 +19,9 @@ class SystemButtonTool : ToolSpec {
     }
 
     override val name: String = "system_button"
+
+    /** System-button presses route through the AccessibilityService. */
+    override val requiredCapabilities: Set<Capability> = setOf(Capability.ACCESSIBILITY)
 
     override val description: String = """
 Press an Android system button (no element targeting needed).

@@ -109,6 +109,17 @@ class DeviceCapabilitySourceTest {
     }
 
     @Test
+    fun `revoked overlay permission is reflected on re-snapshot`() {
+        val src = source(overlayGranted = true)
+        assertThat(src.snapshot()[Capability.OVERLAY]).isEqualTo(CapabilityState.AVAILABLE)
+
+        every { Settings.canDrawOverlays(any()) } returns false
+
+        assertThat(src.snapshot()[Capability.OVERLAY]).isEqualTo(CapabilityState.REQUIRES_PERMISSION)
+        assertThat(CapabilityManager(src).isAvailable(Capability.OVERLAY)).isFalse()
+    }
+
+    @Test
     fun `unprobed capabilities are unknown and deny declared tools`() {
         val manager = CapabilityManager(source())
 

@@ -1,5 +1,6 @@
 package ai.closepaw.tool.impl
 
+import ai.closepaw.tool.Capability
 import ai.closepaw.tool.ToolInvocation
 import ai.closepaw.tool.ToolSpec
 import ai.closepaw.tool.ValidationResult
@@ -26,6 +27,9 @@ import org.json.JSONObject
 class MobileActionTool : ToolSpec {
 
     override val name: String = "mobile_action"
+
+    /** Gestures execute through the AccessibilityService — hidden from the LLM without it. */
+    override val requiredCapabilities: Set<Capability> = setOf(Capability.ACCESSIBILITY)
 
     override val description: String = """
 Perform touch interactions on the device screen.
