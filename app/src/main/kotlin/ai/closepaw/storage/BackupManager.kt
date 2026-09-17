@@ -2,13 +2,13 @@ package ai.closepaw.storage
 
 import android.content.Context
 import android.util.Log
-import ai.closepaw.history.BackupMediaMirror
-import ai.closepaw.history.ChatBackup
+import androidx.annotation.VisibleForTesting
 import ai.closepaw.history.ChatPersistenceManager
 import ai.closepaw.history.storage.SessionStorage
 import ai.closepaw.app.AppSettingsStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.zip.GZIPOutputStream
@@ -25,13 +25,13 @@ class BackupManager(
         private const val BACKUP_FILE_EXTENSION = ".json.gz"
     }
 
-    fun createBackup(): BackupReport = withContext(Dispatchers.IO) {
+    suspend fun createBackup(): BackupReport = withContext(Dispatchers.IO) {
         val timestamp = System.currentTimeMillis()
         val backupFileName = "$BACKUP_FILE_PREFIX${timestamp}$BACKUP_FILE_EXTENSION"
-        val backupFile = storage.backupsDir.resolve(backupFileName)
+        val backupFile = storage.backupDir.resolve(backupFileName)
 
         val persistenceManager = ChatPersistenceManager(
-            SessionStorage(context),
+            SessionStorage(storage.sessionsDir),
             AppSettingsStore(context)
         )
 
@@ -39,18 +39,18 @@ class BackupManager(
         val report = persistenceManager.exportBackup(out)
 
         val compressedData = compress(out.toByteArray())
-        val checksum = storage.computeBackupChecksum(File(backupFile.path))
-
         storage.writeFileSafely(backupFile, compressedData)
+        val checksum = storage.computeBackupChecksum(backupFile)
 
-        val metaFile = storage.backupsDir.resolve("$BACKUP_FILE_PREFIX$timestamp.meta.json")
-        storage.writeJsonFile(metaFile, BackupMetadata(
+        val metaFile = storage.backupDir.resolve("$BACKUP_FILE_PREFIX$timestamp.meta.json")
+        metaFile.parentFile?.mkdirs()
+        metaFile.writeText(BackupMetadata(
             backupFileName = backupFileName,
             checksum = checksum,
             sessionCount = report.sessionCount,
             timestamp = timestamp,
             dataFormatVersion = storage.dataFormatVersion
-        ))
+        ).toJson())
 
         Log.i(TAG, "Created backup: $backupFileName with ${report.sessionCount} sessions")
 
@@ -63,10 +63,10 @@ class BackupManager(
         )
     }
 
-    fun restoreBackup(backupFile: File): RestoreReport = withContext(Dispatchers.IO) {
-        val metaFile = storage.backupsDir.resolve(backupFile.name.replace(BACKUP_FILE_EXTENSION, ".meta.json"))
+    suspend fun restoreBackup(backupFile: File): RestoreReport = withContext(Dispatchers.IO) {
+        val metaFile = storage.backupDir.resolve(backupFile.name.replace(BACKUP_FILE_EXTENSION, ".meta.json"))
 
-        val metadata = storage.readJsonFile<BackupMetadata>(metaFile)
+        val metadata = metaFile.takeIf { it.exists() }?.let { parseMetadata(it.readText()) }
         if (metadata == null) {
             return@withContext RestoreReport(
                 success = false,
@@ -85,27 +85,27 @@ class BackupManager(
 
         val decompressed = decompress(backupFile.readBytes())
         val persistenceManager = ChatPersistenceManager(
-            SessionStorage(context),
+            SessionStorage(storage.sessionsDir),
             AppSettingsStore(context)
         )
 
         val input = java.io.ByteArrayInputStream(decompressed)
         val restoreReport = persistenceManager.restoreBackup(input)
 
-        Log.i(TAG, "Restored backup: ${backupFile.name} with ${restoreReport.sessionCount} sessions")
+        Log.i(TAG, "Restored backup: ${backupFile.name} with ${restoreReport.written} sessions")
 
         RestoreReport(
             success = true,
-            restoredCount = restoreReport.sessionCount,
+            restoredCount = restoreReport.written,
             errorMessage = null
         )
     }
 
-    fun listBackups(): List<BackupInfo> = withContext(Dispatchers.IO) {
-        storage.backupsDir.listFiles()?.filter { it.name.startsWith(BACKUP_FILE_PREFIX) && it.name.endsWith(BACKUP_FILE_EXTENSION) }
+    suspend fun listBackups(): List<BackupInfo> = withContext(Dispatchers.IO) {
+        storage.backupDir.listFiles()?.filter { it.name.startsWith(BACKUP_FILE_PREFIX) && it.name.endsWith(BACKUP_FILE_EXTENSION) }
             ?.mapNotNull { file ->
-                val metaFile = storage.backupsDir.resolve(file.name.replace(BACKUP_FILE_EXTENSION, ".meta.json"))
-                storage.readJsonFile<BackupMetadata>(metaFile)?.let { meta ->
+                val metaFile = storage.backupDir.resolve(file.name.replace(BACKUP_FILE_EXTENSION, ".meta.json"))
+                metaFile.takeIf { it.exists() }?.let { parseMetadata(it.readText()) }?.let { meta ->
                     BackupInfo(
                         file = file,
                         timestamp = meta.timestamp,
@@ -119,11 +119,11 @@ class BackupManager(
             ?: emptyList()
     }
 
-    fun getLatestBackup(): File? = withContext(Dispatchers.IO) {
+    suspend fun getLatestBackup(): File? = withContext(Dispatchers.IO) {
         listBackups().firstOrNull()?.file
     }
 
-    fun autoBackupIfNeeded(): Boolean = withContext(Dispatchers.IO) {
+    suspend fun autoBackupIfNeeded(): Boolean = withContext(Dispatchers.IO) {
         val latestBackup = getLatestBackup()
         val metadata = storage.getMetadata()
 
@@ -192,5 +192,24 @@ class BackupManager(
         val sessionCount: Int,
         val timestamp: Long,
         val dataFormatVersion: String
-    )
+    ) {
+        fun toJson(): String = JSONObject()
+            .put("backupFileName", backupFileName)
+            .put("checksum", checksum)
+            .put("sessionCount", sessionCount)
+            .put("timestamp", timestamp)
+            .put("dataFormatVersion", dataFormatVersion)
+            .toString()
+    }
+
+    private fun parseMetadata(json: String): BackupMetadata? = runCatching {
+        val o = JSONObject(json)
+        BackupMetadata(
+            backupFileName = o.getString("backupFileName"),
+            checksum = o.getString("checksum"),
+            sessionCount = o.getInt("sessionCount"),
+            timestamp = o.getLong("timestamp"),
+            dataFormatVersion = o.getString("dataFormatVersion")
+        )
+    }.getOrNull()
 }

@@ -682,7 +682,7 @@ class MainActivity : ComponentActivity() {
             touchGate: OverlayTouchGate?,
             selected: SessionInfo
     ): AgentSession? {
-        val storage = SessionStorage(applicationContext)
+        val storage = SessionStorage(closePawStorage.sessionsDir)
         val contextFileName = storage.contextFileNameFor(selected.fileName)
         val snapshot = storage.readSnapshot(contextFileName).getOrNull() ?: return null
         if (snapshot.schemaVersion != 2) return null

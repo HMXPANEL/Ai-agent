@@ -1,6 +1,7 @@
 package ai.closepaw.ui.settings
 
 import ai.closepaw.app.AppSettingsStore
+import ai.closepaw.history.storage.SessionStorage
 import ai.closepaw.storage.BackupManager
 import ai.closepaw.storage.ClosePawStorage
 import ai.closepaw.ui.settings.SettingsCard
@@ -20,13 +21,13 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PageMastheadDrillDown
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
-import androidx.lifecycle.lifecycleScope
+import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -44,7 +45,7 @@ internal fun BackupRestoreSettingsPage(
     sessionStorage: SessionStorage,
     onDismiss: () -> Unit = onClose,
 ) {
-    val scope = remember { lifecycleScope }
+    val scope = rememberCoroutineScope()
     val closePawStorage = remember { ClosePawStorage.getInstance(context) }
     val backupManager = remember { BackupManager(context, closePawStorage) }
 
@@ -56,8 +57,8 @@ internal fun BackupRestoreSettingsPage(
     val exportReport by remember { mutableStateOf<BackupManager.BackupReport?>(null) }
     val restoreReport by remember { mutableStateOf<BackupManager.RestoreReport?>(null) }
 
-    val lastExportedCount by remember { mutableStateOf<Int?>(null) }
-    val lastRestoredCount by remember { mutableStateOf<Int?>(null) }
+    var lastExportedCount by remember { mutableStateOf<Int?>(null) }
+    var lastRestoredCount by remember { mutableStateOf<Int?>(null) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         PageMastheadDrillDown(title = "Backup & Restore", onBack = onBack, onClose = onClose)
@@ -90,7 +91,7 @@ internal fun BackupRestoreSettingsPage(
                                     val report = withContext(Dispatchers.IO) {
                                         backupManager.createBackup()
                                     }
-                                    lastExportedCount.value = report.sessionCount
+                                    lastExportedCount = report.sessionCount
                                     resultMessage = "Exported ${report.sessionCount} sessions"
                                     showResultDialog = true
                                 }
@@ -146,7 +147,10 @@ internal fun BackupRestoreSettingsPage(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    val backups = remember { mutableStateOf(backupManager.listBackups()) }
+                    val backups = remember { mutableStateOf<List<BackupManager.BackupInfo>>(emptyList()) }
+                    LaunchedEffect(backupManager) {
+                        backups.value = withContext(Dispatchers.IO) { backupManager.listBackups() }
+                    }
                     Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.closePaw.spacing.xs)) {
                         backups.value.forEach { backup ->
                             Row(
@@ -172,7 +176,7 @@ internal fun BackupRestoreSettingsPage(
                                                 backupManager.restoreBackup(backup.file)
                                             }
                                             if (report.success) {
-                                                lastRestoredCount.value = report.restoredCount
+                                                lastRestoredCount = report.restoredCount
                                                 resultMessage = "Restored ${report.restoredCount} sessions"
                                             } else {
                                                 resultMessage = "Restore failed: ${report.errorMessage}"

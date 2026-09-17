@@ -90,6 +90,8 @@ private val LlmAuthTab.mode: AuthMode
     }
 
 private fun AuthMode.toTab(): LlmAuthTab = when (this) {
+    // No Sign In tab anymore — OAuth-mode models land on the API Key tab.
+    AuthMode.OAuth -> LlmAuthTab.API_KEY
     AuthMode.ApiKey -> LlmAuthTab.API_KEY
     AuthMode.Local -> LlmAuthTab.LOCAL
 }
@@ -122,12 +124,12 @@ internal fun LlmAuthSettingsPage(
     onOtherBaseUrlChange: (String) -> Unit = {},
     onOtherModelIdChange: (String) -> Unit = {},
 ) {
-    // Initial tab: explicit caller request wins; else derive from selected model's provider mode.
+    // Initial tab: derive from the selected model's provider mode.
     // When the Local tab is hidden, any LOCAL landing target falls back to API_KEY.
     val modelMode = modelCatalog.resolveOrNull(selectedModel)?.provider?.mode
-    var selectedTab by rememberSaveable(initialAuthTab, modelMode, llmBackend) {
+    var selectedTab by rememberSaveable(modelMode, llmBackend) {
         val raw = when {
-            initialAuthTab != null -> initialAuthTab.toTab()
+            modelMode == AuthMode.OAuth -> modelMode.toTab()
             llmBackend == LLMBackendType.LOCAL -> LlmAuthTab.LOCAL
             else -> LlmAuthTab.API_KEY
         }

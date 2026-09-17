@@ -216,7 +216,7 @@ fun SettingsSheet(
                         onClose = onDismiss,
                         context = LocalContext.current,
                         appSettingsStore = AppSettingsStore(LocalContext.current),
-                        sessionStorage = SessionStorage(LocalContext.current),
+                        sessionStorage = SessionStorage.createDefault(LocalContext.current),
                         onDismiss = onDismiss,
                     )
                     SettingsPage.OPEN_SOURCE_LICENSES -> OpenSourceLicensesPage(

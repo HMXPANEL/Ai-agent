@@ -1,35 +1,66 @@
 package ai.closepaw.storage
 
-import android.content.ContentValues
 import android.content.Context
-import android.database.Cursor
-import android.net.Uri
-import android.os.Build
 import android.os.Environment
-import android.provider.MediaStore
 import androidx.annotation.VisibleForTesting
 import java.io.File
 import java.io.FileOutputStream
 import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicReference
 
-object ClosePawStorage {
+class ClosePawStorage {
 
-    private const val STORAGE_DIRECTORY_NAME = "ClosePaw"
-    private const val METADATA_DIRECTORY_NAME = "metadata"
-    private const val BACKUP_DIRECTORY_NAME = "backups"
-    private const val MEMORY_DIRECTORY_NAME = "memory"
-    private const val SESSIONS_DIRECTORY_NAME = "sessions"
-    private const val SETTINGS_DIRECTORY_NAME = "settings"
-    private const val SKILLS_DIRECTORY_NAME = "skills"
-    private const val DIAGNOSTICS_DIRECTORY_NAME = "diagnostics"
-    private const val EXPORTS_DIRECTORY_NAME = "exports"
-    private const val STORAGE_FILE_NAME = "storage.json"
+    companion object {
+        private const val STORAGE_DIRECTORY_NAME = "ClosePaw"
+        private const val METADATA_DIRECTORY_NAME = "metadata"
+        private const val BACKUP_DIRECTORY_NAME = "backups"
+        private const val MEMORY_DIRECTORY_NAME = "memory"
+        private const val SESSIONS_DIRECTORY_NAME = "sessions"
+        private const val SETTINGS_DIRECTORY_NAME = "settings"
+        private const val SKILLS_DIRECTORY_NAME = "skills"
+        private const val DIAGNOSTICS_DIRECTORY_NAME = "diagnostics"
+        private const val EXPORTS_DIRECTORY_NAME = "exports"
+        private const val STORAGE_FILE_NAME = "storage.json"
 
-    private const val SCHEMA_VERSION = 2
-    private const val DATA_FORMAT_VERSION = "1.0.0"
+        private const val SCHEMA_VERSION = 2
+        private const val DATA_FORMAT_VERSION = "1.0.0"
 
-    private val instanceRef = AtomicReference<ClosePawStorage?>()
+        private val instanceRef = AtomicReference<ClosePawStorage?>()
+
+        @Volatile
+        private var _initialized = false
+
+        fun getInstance(context: Context): ClosePawStorage = synchronized(this) {
+            instanceRef.getAndUpdate { existing ->
+                existing ?: run {
+                    val storage = ClosePawStorage(context)
+                    _initialized = true
+                    storage
+                }
+            } ?: instanceRef.get()!!
+        }
+
+        @VisibleForTesting
+        internal fun resetInstance() {
+            instanceRef.set(null)
+            _initialized = false
+        }
+
+        @VisibleForTesting
+        fun SHA256(content: ByteArray): String {
+            return MessageDigest.getInstance("SHA-256").apply { digest(content) }
+                .joinToString("") { "%02x".format(it) }
+        }
+
+        fun verifyBackupChecksum(backupFile: File, expectedChecksum: String): Boolean {
+            val actual = SHA256(backupFile.readBytes())
+            return actual == expectedChecksum
+        }
+
+        fun computeBackupChecksum(backupFile: File): String {
+            return SHA256(backupFile.readBytes())
+        }
+    }
 
     val schemaVersion: Int get() = SCHEMA_VERSION
     val dataFormatVersion: String get() = DATA_FORMAT_VERSION
@@ -43,25 +74,6 @@ object ClosePawStorage {
     val skillsDir: File
     val diagnosticsDir: File
     val exportsDir: File
-
-    @Volatile
-    private var _initialized = false
-
-    fun getInstance(context: Context): ClosePawStorage = synchronized(this) {
-        instanceRef.getAndUpdate { existing ->
-            existing ?: run {
-                val storage = ClosePawStorage(context)
-                _initialized = true
-                storage
-            }
-        } ?: instanceRef.get()!!
-    }
-
-    @VisibleForTesting
-    internal fun resetInstance() {
-        instanceRef.set(null)
-        _initialized = false
-    }
 
     private constructor(context: Context) {
         val rootDir = getOrCreateClosePawRootDirectory(context)
@@ -80,64 +92,10 @@ object ClosePawStorage {
     }
 
     private fun getOrCreateClosePawRootDirectory(context: Context): File {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            getOrCreateMediaStoreDirectory(context)
-        } else {
-            getLegacySharedDirectory(context)
-        }
-    }
-
-    private fun getOrCreateMediaStoreDirectory(context: Context): File {
-        val resolver = context.contentResolver
-        val projection = arrayOf(MediaStore.DirectoryColumns._ID, MediaStore.DirectoryColumns.DATA)
-
-        try {
-            val cursor = resolver.query(
-                MediaStore.Directories.EXTERNAL_CONTENT_URI,
-                projection,
-                "${MediaStore.DirectoryColumns.RELATIVE_PATH} = ?",
-                arrayOf("ClosePaw/"),
-                null
-            )
-
-            if (cursor != null) {
-                cursor.use { c ->
-                    if (c.moveToFirst()) {
-                        val path = c.getString(c.getColumnIndexOrThrow(MediaStore.DirectoryColumns.DATA))
-                        val dir = File(path)
-                        if (dir.exists() && dir.isDirectory) {
-                            return dir
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-        }
-
-        return tryCreateMediaStoreDirectory(context)
-    }
-
-    private fun tryCreateMediaStoreDirectory(context: Context): File {
-        val resolver = context.contentResolver
-        val values = ContentValues().apply {
-            put(MediaStore.DirectoryColumns.RELATIVE_PATH, "ClosePaw/")
-            put(MediaStore.DirectoryColumns.DISPLAY_NAME, "ClosePaw")
-            put(MediaStore.DirectoryColumns.MEDIA_TYPE, 0)
-        }
-
-        try {
-            val uri = resolver.insert(MediaStore.Directories.EXTERNAL_CONTENT_URI, values)
-            if (uri != null) {
-                val path = resolver.query(uri, arrayOf(MediaStore.DirectoryColumns.DATA), null, null, null)?.use { c ->
-                    if (c.moveToFirst()) {
-                        c.getString(c.getColumnIndexOrThrow(MediaStore.DirectoryColumns.DATA))
-                    } else null
-                }
-                path?.let { File(it) }?.also { if (it.exists()) return it }
-            }
-        } catch (e: Exception) {
-        }
-
+        // NOTE: the MediaStore shared-directory approach is not available through
+        // the SDK, so the app-external directory is the storage root. It keeps
+        // data out of the app-private filesDir (the Phase 2 layout) while staying
+        // within APIs the app can actually call.
         return getLegacySharedDirectory(context)
     }
 
@@ -242,37 +200,20 @@ object ClosePawStorage {
         }
     }
 
-    @VisibleForTesting
-    fun SHA256(content: ByteArray): String {
-        return MessageDigest.getInstance("SHA-256").apply { digest(content) }.joinToString("") { "%02x".format(it) }
-    }
-
-    @JvmStatic
-    fun verifyBackupChecksum(backupFile: File, expectedChecksum: String): Boolean {
-        val actual = SHA256(backupFile.readBytes())
-        return actual == expectedChecksum
-    }
-
-    @JvmStatic
-    fun computeBackupChecksum(backupFile: File): String {
-        return SHA256(backupFile.readBytes())
-    }
-
-    @JvmInline
     fun writeFileSafely(file: File, content: ByteArray): Boolean {
         val tempFile = file.parentFile.resolve(file.name + ".tmp")
         try {
+            file.parentFile.mkdirs()
             tempFile.writeBytes(content)
-            tempFile.sync()
+            FileOutputStream(tempFile, true).use { it.fd.sync() }
             tempFile.renameTo(file)
             return true
         } catch (e: Exception) {
-            tempFile.deleteQuietly()
+            tempFile.delete()
             return false
         }
     }
 
-    @JvmInline
     fun readFileContent(file: File): ByteArray? {
         return if (file.exists()) file.readBytes() else null
     }
@@ -309,7 +250,6 @@ object ClosePawStorage {
         return exportsDir.resolve(subdir).apply { mkdirs() }
     }
 
-    @JvmInline
     fun atomicRenameSafely(from: File, to: File): Boolean {
         from.parentFile.mkdirs()
         to.parentFile.mkdirs()
