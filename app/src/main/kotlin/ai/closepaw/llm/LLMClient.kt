@@ -23,7 +23,8 @@ abstract class LLMClient {
     
     companion object {
         const val TAG = "LLMClient"
-        
+        const val DEFAULT_MODEL = "glm-5"
+
         // Rate limit configuration (shared defaults)
         const val MAX_RETRIES = 5
         const val INITIAL_BACKOFF_MS = 1000L

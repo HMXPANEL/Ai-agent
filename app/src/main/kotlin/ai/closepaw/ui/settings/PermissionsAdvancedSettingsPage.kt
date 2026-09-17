@@ -161,6 +161,7 @@ private fun DataStorageSection(
     onTraceEnabledChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
+    val closePawStorage = ClosePawStorage.getInstance(context)
     val scope = rememberCoroutineScope()
     var traceClearState by remember { mutableStateOf<ClearDataState>(ClearDataState.Idle) }
     var sessionClearState by remember { mutableStateOf<ClearDataState>(ClearDataState.Idle) }
@@ -180,7 +181,6 @@ private fun DataStorageSection(
     fun clearSessions() {
         if (sessionClearState is ClearDataState.Clearing) return
         sessionClearState = ClearDataState.Clearing
-        val closePawStorage = ClosePawStorage.getInstance(LocalContext.current)
         scope.launch {
             sessionClearState = withContext(Dispatchers.IO) {
                 clearDirectory(closePawStorage.sessionsDir, label = "session history")

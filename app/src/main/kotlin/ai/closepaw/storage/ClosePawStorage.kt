@@ -46,20 +46,6 @@ class ClosePawStorage {
             _initialized = false
         }
 
-        @VisibleForTesting
-        fun SHA256(content: ByteArray): String {
-            return MessageDigest.getInstance("SHA-256").apply { digest(content) }
-                .joinToString("") { "%02x".format(it) }
-        }
-
-        fun verifyBackupChecksum(backupFile: File, expectedChecksum: String): Boolean {
-            val actual = SHA256(backupFile.readBytes())
-            return actual == expectedChecksum
-        }
-
-        fun computeBackupChecksum(backupFile: File): String {
-            return SHA256(backupFile.readBytes())
-        }
     }
 
     val schemaVersion: Int get() = SCHEMA_VERSION
@@ -188,9 +174,24 @@ class ClosePawStorage {
     }
 
     @VisibleForTesting
+    fun SHA256(content: ByteArray): String {
+        return MessageDigest.getInstance("SHA-256").digest(content)
+            .joinToString("") { "%02x".format(it) }
+    }
+
+    fun verifyBackupChecksum(backupFile: File, expectedChecksum: String): Boolean {
+        val actual = SHA256(backupFile.readBytes())
+        return actual == expectedChecksum
+    }
+
+    fun computeBackupChecksum(backupFile: File): String {
+        return SHA256(backupFile.readBytes())
+    }
+
+    @VisibleForTesting
     fun deserializeFromJson(json: String): StorageMetadata? {
         try {
-            val schemaVersion = json.decodeStringField("schemaVersion") { it.toInt() }
+            val schemaVersion = json.decodeIntField("schemaVersion") { it.toInt() }
             val createdAt = json.decodeLongField("createdAt") { System.currentTimeMillis() }
             val lastUpdatedAt = json.decodeLongField("lastUpdatedAt") { System.currentTimeMillis() }
             val dataFormatVersion = json.decodeStringField("dataFormatVersion") { "1.0.0" }
@@ -263,6 +264,12 @@ class ClosePawStorage {
     }
 
     private fun String.decodeLongField(fieldName: String, default: (String) -> Long): Long {
+        val pattern = "\"$fieldName\"\\s*:\\s*(\\d+)".toRegex()
+        val match = pattern.find(this)
+        return match?.groupValues?.get(1)?.let { default(it) } ?: default("")
+    }
+
+    private fun String.decodeIntField(fieldName: String, default: (String) -> Int): Int {
         val pattern = "\"$fieldName\"\\s*:\\s*(\\d+)".toRegex()
         val match = pattern.find(this)
         return match?.groupValues?.get(1)?.let { default(it) } ?: default("")
