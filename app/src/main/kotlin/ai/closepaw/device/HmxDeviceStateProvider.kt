@@ -42,6 +42,8 @@ class AndroidHmxDeviceStateProvider(
     private val capabilities: () -> Map<Capability, CapabilityState> = { emptyMap() },
     private val display: () -> DisplayInfo? = { null },
     private val sessionPhase: () -> String? = { null },
+    private val batteryPercent: () -> Int? = { null },
+    private val networkAvailable: () -> Boolean? = { null },
     initial: HmxDeviceState? = null,
 ) : HmxDeviceStateProvider {
 
@@ -73,6 +75,8 @@ class AndroidHmxDeviceStateProvider(
         val caps = runCatching { capabilities() }.getOrDefault(emptyMap())
         val disp = runCatching { display() }.getOrNull()
         val phase = runCatching { sessionPhase() }.getOrNull()
+        val battery = runCatching { batteryPercent() }.getOrNull()
+        val network = runCatching { networkAvailable() }.getOrNull()
         return HmxDeviceState(
             timestampMs = now,
             foregroundPackage = pkg,
@@ -81,6 +85,8 @@ class AndroidHmxDeviceStateProvider(
             capabilities = caps,
             display = disp,
             sessionPhase = phase,
+            batteryPercent = battery,
+            networkAvailable = network,
             fieldStates = mapOf(
                 DeviceStateField.FOREGROUND_APP to
                     if (pkg != null) CapabilityState.AVAILABLE else CapabilityState.UNKNOWN,
@@ -94,6 +100,10 @@ class AndroidHmxDeviceStateProvider(
                     if (disp != null) CapabilityState.AVAILABLE else CapabilityState.UNKNOWN,
                 DeviceStateField.SESSION to
                     if (phase != null) CapabilityState.AVAILABLE else CapabilityState.UNKNOWN,
+                DeviceStateField.BATTERY to
+                    if (battery != null) CapabilityState.AVAILABLE else CapabilityState.UNKNOWN,
+                DeviceStateField.NETWORK to
+                    if (network != null) CapabilityState.AVAILABLE else CapabilityState.UNKNOWN,
             ),
         )
     }

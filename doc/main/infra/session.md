@@ -341,8 +341,10 @@ Suspension bridge between the `ask_user` tool and the UI. Uses `AtomicReference<
 → See: `device/HmxDeviceState.kt`, `device/HmxDeviceStateProvider.kt`
 
 Immutable per-task snapshot: `timestampMs`, `foregroundPackage`, `accessibilityAvailable`,
-`overlayGranted`, `capabilities`, `display`, `sessionPhase`, plus per-field `fieldStates`
-(`DeviceStateField`: FOREGROUND_APP/ACCESSIBILITY/OVERLAY/CAPABILITIES/DISPLAY/SESSION).
+`overlayGranted`, `capabilities`, `display`, `sessionPhase`, `batteryPercent` (0–100),
+`networkAvailable`, plus per-field `fieldStates`
+(`DeviceStateField`: FOREGROUND_APP/ACCESSIBILITY/OVERLAY/CAPABILITIES/DISPLAY/SESSION/
+BATTERY/NETWORK).
 Each field carries its own `CapabilityState`, so callers distinguish known-absent
 (`UNAVAILABLE`) from could-not-read (`UNKNOWN`); only `AVAILABLE` means usable. No PII —
 package names and display metrics only.
@@ -350,7 +352,10 @@ package names and display metrics only.
 The provider caches one snapshot for `DEFAULT_MAX_AGE_MS = 2_000ms`; `current()` re-reads
 when stale, `refresh()` forces a read, `observe()` exposes a `StateFlow`. Every probe failure
 degrades only its field and never throws. Refreshed once per task in
-`SessionAgentRunner.start`. Battery/network fields are **deferred** (not implemented).
+`SessionAgentRunner.start`. Battery reads `BatteryManager.BATTERY_PROPERTY_CAPACITY`
+(no permission needed); network reads `ConnectivityManager` active-network
+`NET_CAPABILITY_INTERNET` (manifest declares `ACCESS_NETWORK_STATE`, a normal
+install-time permission). No polling — reads happen on the existing refresh path only.
 Device-gated CI/device validation was still pending at implementation time.
 
 ---

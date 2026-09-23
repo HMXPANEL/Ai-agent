@@ -252,6 +252,20 @@ class SessionServices internal constructor(
                 display = {
                     runCatching { platform.getDisplayInfo() }.getOrNull()
                 },
+                batteryPercent = {
+                    runCatching {
+                        val bm = context.getSystemService(android.os.BatteryManager::class.java)
+                        bm?.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
+                            ?.takeIf { it >= 0 }
+                    }.getOrNull()
+                },
+                networkAvailable = {
+                    runCatching {
+                        val cm = context.getSystemService(android.net.ConnectivityManager::class.java)
+                        val caps = cm?.getNetworkCapabilities(cm.activeNetwork)
+                        caps?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    }.getOrNull()
+                },
             )
 
             return SessionServices(

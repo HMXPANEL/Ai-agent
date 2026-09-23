@@ -18,6 +18,8 @@ enum class DeviceStateField {
     CAPABILITIES,
     DISPLAY,
     SESSION,
+    BATTERY,
+    NETWORK,
 }
 
 /**
@@ -35,6 +37,10 @@ data class HmxDeviceState(
     val display: DisplayInfo?,
     val sessionPhase: String?,
     val fieldStates: Map<DeviceStateField, CapabilityState>,
+    /** Battery charge 0–100, or null when unreadable. */
+    val batteryPercent: Int? = null,
+    /** True when an internet-capable network is active, or null when unreadable. */
+    val networkAvailable: Boolean? = null,
 ) {
     /** True when the snapshot is older than [maxAgeMs]. Stale state must be refreshed, not trusted. */
     fun isStale(nowMs: Long, maxAgeMs: Long = DEFAULT_MAX_AGE_MS): Boolean =
