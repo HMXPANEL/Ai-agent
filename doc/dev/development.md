@@ -60,8 +60,8 @@ All day-to-day work uses the **debug** APK. The **release** APK is only for ship
 - `protocol/` (pure data) and `debug/` (dev tooling) have no test dirs — P2, low risk.
 - Real-device validation (Shizuku binder, VD lifecycle, Termux on OEM ROMs, demo E2E) is
   pending for Phases 1–4; CI-green ≠ device-proven. No sustained perf benchmark exists.
-- Full inventory: `docs/audit/07-TEST-COVERAGE.md`; build/resource facts:
-  `docs/audit/08-BUILD-AND-RESOURCE-AUDIT.md`.
+- Full inventory: [docs/audit/07-TEST-COVERAGE.md](../../docs/audit/07-TEST-COVERAGE.md); build/resource facts:
+  [docs/audit/08-BUILD-AND-RESOURCE-AUDIT.md](../../docs/audit/08-BUILD-AND-RESOURCE-AUDIT.md).
 
 ## Quick Start
 
