@@ -53,7 +53,7 @@ Phase 8 must apply the normative fixes. Pre-existing working-tree changes (delet
 
 ## Git Push
 
-See push status in final report.
+**BLOCKED — invalid credentials.** Two auth schemes attempted (Bearer header, Basic x-access-token), both rejected by GitHub (`invalid credentials` / `Invalid username or token`). Token appears revoked/expired or lacks repo access. Per protocol: no further push retries until credentials are fixed; all phases continue locally as COMMITTED ONLY with a single final push re-attempt at the end.
 
 ## Phase Status
 
