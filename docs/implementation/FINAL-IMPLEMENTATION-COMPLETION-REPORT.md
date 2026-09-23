@@ -77,7 +77,7 @@ None (pins only).
 
 ## GitHub Push Status
 
-See below — single push attempt at end of run.
+**COMMITTED LOCALLY — PUSH BLOCKED BY AUTHENTICATION.** Final attempt rejected (no credential accepted; falls back to interactive prompt which cannot complete headless). Earlier runs also received explicit `invalid credentials`. Token appears revoked/expired or without access to `HMXPANEL/Ai-agent`. No history rewritten, no force-push attempted. To publish: provide a valid token with `contents:write`, then `git push origin master` (11 commits).
 
 ## Remaining Technical Debt
 
