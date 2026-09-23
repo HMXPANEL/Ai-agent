@@ -152,11 +152,14 @@ allowlist ∩ `ToolRegistry.getAvailable(manager)` to the LLM.
 
 Current scope (verified): only `MobileActionTool`/`SystemButtonTool` (→`ACCESSIBILITY`) and
 `TermuxShellTool` (→`TERMUX_SHELL`) declare requirements, so the remaining capabilities stay
-`UNKNOWN` with no additional filtering. There is **no execution-time re-check**: a capability
-lost between prompt construction and execution is not re-verified by `ToolRouter`
-(queued P1 hardening). Browser/CDP gating additionally lives in the older
+`UNKNOWN` with no additional filtering. Since 2026-09-24 the gate runs at **two points**:
+advertisement-time (`Turn.prepareRequest` ∩ `getAvailable`) **and execution-time
+(`ToolRouter.execute` re-checks `canUse(tool.requiredCapabilities)` on the live source
+immediately before EXECUTING, after policy + approval — a capability lost since planning
+denies with `Capability unavailable at execution: ...` without running the tool).
+Browser/CDP gating additionally lives in the older
 `DefaultBrowserScriptCapabilityGate` (flag → Shizuku → permission → preflight), not in this
-system — the two mechanisms coexist.
+system — the two mechanisms coexist (`browser_script` declares no `requiredCapabilities`).
 
 ---
 

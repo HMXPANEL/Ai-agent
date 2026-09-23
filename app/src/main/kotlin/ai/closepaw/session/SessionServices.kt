@@ -187,6 +187,15 @@ class SessionServices internal constructor(
             val effectiveConfig =
                     if (effectiveExcludedTools == config.excludedTools) config
                     else config.copy(excludedTools = effectiveExcludedTools)
+            // Live capability source, built before tooling so the ToolRouter gets the
+            // same instance for execution-time re-checks (closes advertisement-only gap).
+            val capabilityManager = ai.closepaw.tool.CapabilityManager(
+                ai.closepaw.tool.AndroidDeviceCapabilitySource(
+                    appContext = context.applicationContext,
+                    termuxSnapshot = termuxSnapshot,
+                    accessibilityAvailable = true
+                )
+            )
             val tooling = SessionToolingBootstrapper.create(
                 approvalMode = effectiveConfig.approvalMode,
                 appClassifier = appClassifier,
@@ -195,7 +204,8 @@ class SessionServices internal constructor(
                 delegatableRoleDefs = AgentDefRegistry.delegatableRoles(),
                 termuxSnapshot = termuxSnapshot,
                 excludedTools = effectiveConfig.excludedTools,
-                context = context.applicationContext
+                context = context.applicationContext,
+                capabilityManager = capabilityManager
             )
             val policyEngine = tooling.policyEngine
             val sessionState = tooling.sessionState
@@ -224,13 +234,6 @@ class SessionServices internal constructor(
 
             Log.i(TAG, "SessionServices created successfully")
 
-            val capabilityManager = ai.closepaw.tool.CapabilityManager(
-                ai.closepaw.tool.AndroidDeviceCapabilitySource(
-                    appContext = context.applicationContext,
-                    termuxSnapshot = termuxSnapshot,
-                    accessibilityAvailable = true
-                )
-            )
             val deviceState = ai.closepaw.device.AndroidHmxDeviceStateProvider(
                 foregroundPackage = {
                     runCatching { platform.getCurrentPackageName() }.getOrNull()

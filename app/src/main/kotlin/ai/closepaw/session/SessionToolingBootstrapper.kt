@@ -45,7 +45,8 @@ internal object SessionToolingBootstrapper {
         delegatableRoleDefs: List<AgentRoleDef> = emptyList(),
         termuxSnapshot: TermuxCapabilitySnapshot = TermuxCapabilitySnapshot.Unavailable,
         excludedTools: Set<String> = emptySet(),
-        context: Context? = null
+        context: Context? = null,
+        capabilityManager: ai.closepaw.tool.CapabilityManager? = null
     ): SessionToolingBootstrap {
         val policyEngine = PolicyEngine(
             initialApprovalMode = approvalMode,
@@ -75,7 +76,7 @@ internal object SessionToolingBootstrapper {
             Log.d(TAG, "Registered ActivateSkillTool (catalog non-empty)")
         }
 
-        val toolRouter = ToolRouter(toolRegistry, policyEngine)
+        val toolRouter = ToolRouter(toolRegistry, policyEngine, capabilityManager)
 
         Log.d(TAG, "Created policy/tool stack with ${toolRegistry.size()} built-in tools")
 

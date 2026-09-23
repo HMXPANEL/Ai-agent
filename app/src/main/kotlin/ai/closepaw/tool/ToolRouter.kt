@@ -29,7 +29,14 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class ToolRouter(
     private val registry: ToolRegistry,
-    private val policyEngine: PolicyEngine
+    private val policyEngine: PolicyEngine,
+    /**
+     * Execution-time capability gate (closes the advertisement-time-only hole).
+     * Re-evaluated immediately before EXECUTING from the live source — never
+     * trusted from prompt-time state. Null disables the check (legacy/test paths).
+     * Tools without [ToolSpec.requiredCapabilities] are unaffected.
+     */
+    private val capabilityManager: CapabilityManager? = null
 ) {
     
     companion object {
@@ -265,7 +272,25 @@ class ToolRouter(
             cleanupCall(resolvedCallId)
             return ToolCallResult.Cancelled(resolvedCallId, "Cancelled before execution")
         }
-        
+
+        // === EXECUTION-TIME CAPABILITY CHECK ===
+        // Fail closed on the live source: a capability lost since prompt-time
+        // advertisement (Shizuku death, Termux kill, permission revoke) denies
+        // here even if policy allowed and the user approved. Runs after approval
+        // so it can never bypass policy or approval semantics.
+        val manager = capabilityManager
+        if (manager != null) {
+            val missing = tool.requiredCapabilities.filter { !manager.isAvailable(it) }
+            if (missing.isNotEmpty()) {
+                val reason = "Capability unavailable at execution: ${missing.joinToString(", ")}"
+                Log.w(TAG, "$reason for $resolvedCallId ($toolName)")
+                val cancelledState = ToolCallState.Cancelled(resolvedCallId, toolName, params, reason)
+                updateState(cancelledState, onStateChange)
+                cleanupCall(resolvedCallId)
+                return ToolCallResult.Cancelled(resolvedCallId, reason)
+            }
+        }
+
         // === STATE: EXECUTING ===
         state = ToolCallState.Executing(resolvedCallId, toolName, params, invocation)
         updateState(state, onStateChange)

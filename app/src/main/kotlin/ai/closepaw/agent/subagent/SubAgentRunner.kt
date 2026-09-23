@@ -89,7 +89,7 @@ internal class IsolatedSubAgentRunner(
         // ScratchpadState uses synchronized access and is safe for concurrent coroutine access.
         val childServices = parentServices.copy(
             toolRegistry = childTools,
-            toolRouter = ToolRouter(childTools, parentServices.policyEngine),
+            toolRouter = ToolRouter(childTools, parentServices.policyEngine, parentServices.capabilityManager),
             historyManager = HistoryManager(),
             sessionState = AgentSessionState(
                 scratchpad = parentServices.sessionState.scratchpad
