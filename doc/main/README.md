@@ -189,7 +189,7 @@ app/src/main/kotlin/ai/closepaw/
 │   ├── Op.kt                     # Operations (UI → Agent, 8 ops)
 │   ├── AgentEvent.kt             # Events (Agent → UI, base sealed interface)
 │   ├── AgentEventDomains.kt      # Domain marker interfaces
-│   ├── SessionState.kt           # State machine (5 states: Created/Running/Idle/Paused/Shutdown)
+│   ├── SessionState.kt           # State machine (6 states: Created/Running/Idle/TakeoverPending/Paused/Shutdown)
 │   ├── SessionConfig.kt          # Session configuration
 │   ├── ApprovalTypes.kt          # Approval decision types
 │   ├── TaskOutcome.kt            # Task-level outcome (5 values)

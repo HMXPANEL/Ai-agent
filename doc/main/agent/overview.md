@@ -37,7 +37,10 @@
 │       │ starts              │                                │  │
 │       ▼                     │ provides                       │  │
 │  SessionAgentRunner         │                                │  │
-│       │ creates Agent       │                                │  │
+│       │ creates HmxAgent(Agent) │                                │  │
+│       ▼                     │ provides                       │  │
+│  HmxAgent ──orchestrates──► TaskOrchestrator (single execution) │  │
+│       │ delegates loop to   │                                │  │
 │       ▼                     │                                │  │
 │  Agent (turn loop) ◄────────┘                                │  │
 │       │ executes one turn via                                │  │
@@ -146,6 +149,16 @@ ai.closepaw/
 ```
 
 ---
+
+## HMX Execution Wrapper (Phase 2)
+
+`SessionAgentRunner.start()` does not run `Agent` directly. It builds an `AgentExecutionConfig`
++ `Compactor`, constructs the `Agent` executor, and wraps it in `HmxAgent`
+(`agent/HmxAgent.kt`), which coordinates a single execution through `TaskOrchestrator.orchestrate()`
+(`agent/TaskOrchestrator.kt`). Pause/resume/stop delegate straight to the executor, so the legacy
+turn loop is unchanged. `Planner`/`DefaultPlanner` (`agent/Planner.kt`) exists with
+`useLegacyPath=true` (always takes the single legacy run; planner failure falls back to it).
+`Agent.kt` itself changed only by `override` keywords + the `HmxAgentExecutor` interface clause.
 
 ## Related Docs
 
