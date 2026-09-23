@@ -118,9 +118,11 @@ class ToolRouterCapabilityTest {
 
     @Test
     fun `tool without requirements executes under unknown capabilities`() = runTest {
-        val spec = GatedToolSpec(name = "plain_tool", requiredCapabilities = emptySet())
+        // NOTE: must use a real non-screen-changing category — Unknown tool names are
+        // screen-changing by default (ToolName) and would route to approval instead.
+        val spec = GatedToolSpec(name = "scratchpad", requiredCapabilities = emptySet())
 
-        val result = routerWith(spec).execute("plain_tool", JSONObject(), context())
+        val result = routerWith(spec).execute("scratchpad", JSONObject(), context())
 
         assertThat(result).isInstanceOf(ToolCallResult.Success::class.java)
         assertThat(spec.executed).isTrue()

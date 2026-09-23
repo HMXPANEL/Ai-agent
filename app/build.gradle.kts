@@ -234,7 +234,10 @@ dependencies {
     testImplementation("com.google.truth:truth:1.4.2")
     // Pure Java JSON library for unit tests (Android's JSONObject is not available in unit tests)
     testImplementation("org.json:json:20240303")
-    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    // MockWebServer 5.x pairs with the resolved okhttp 5.2.1 (Leap SDK's ktor-client-okhttp
+    // forces okhttp 4.12.0 -> 5.2.1 in every runtime). Do NOT downgrade to 4.x: MockWebServer
+    // 4.x links okhttp 4.x internals absent from okhttp 5 and dies with NoClassDefFoundError.
+    testImplementation("com.squareup.okhttp3:mockwebserver:5.2.1")
 
     // Instrumented QA tests (Compose UI Test on emulator/device)
     androidTestImplementation(composeBom)

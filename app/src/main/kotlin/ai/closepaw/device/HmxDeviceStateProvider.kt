@@ -47,10 +47,15 @@ class AndroidHmxDeviceStateProvider(
     initial: HmxDeviceState? = null,
 ) : HmxDeviceStateProvider {
 
-    @Volatile
-    private var cached: HmxDeviceState? = initial
+    // Single construction-time read feeds both the cache and the flow: previously the flow
+    // init read once while `cached` stayed null, so the first current() probed a second time
+    // and broke the bounded-cache contract (extra foreground-package probe per provider).
+    private val initialState: HmxDeviceState = initial ?: read()
 
-    private val _updates = MutableStateFlow(initial ?: read())
+    @Volatile
+    private var cached: HmxDeviceState? = initialState
+
+    private val _updates = MutableStateFlow(initialState)
 
     override fun observe(): StateFlow<HmxDeviceState> = _updates.asStateFlow()
 
