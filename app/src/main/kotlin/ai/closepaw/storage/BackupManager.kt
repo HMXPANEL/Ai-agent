@@ -75,7 +75,7 @@ class BackupManager(
             )
         }
 
-        if (!storage.verifyBackupChecksum(backupFile, metadata.checksum)) {
+        if (!runCatching { storage.verifyBackupChecksum(backupFile, metadata.checksum) }.getOrDefault(false)) {
             return@withContext RestoreReport(
                 success = false,
                 restoredCount = 0,
@@ -83,7 +83,16 @@ class BackupManager(
             )
         }
 
-        val decompressed = decompress(backupFile.readBytes())
+        val decompressed = try {
+            decompress(backupFile.readBytes())
+        } catch (e: Exception) {
+            Log.w(TAG, "Backup archive unreadable: ${backupFile.name}", e)
+            return@withContext RestoreReport(
+                success = false,
+                restoredCount = 0,
+                errorMessage = "Backup archive is corrupted or unreadable"
+            )
+        }
         val persistenceManager = ChatPersistenceManager(
             SessionStorage(storage.sessionsDir),
             AppSettingsStore(context)
