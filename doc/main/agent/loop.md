@@ -272,6 +272,25 @@ Recoverable errors allow the loop to continue; fatal errors stop the agent.
 | `PERCEPTION` | Capturing screen, classifying app tier, masking BLOCKED content |
 | `PLANNING` | LLM reasoning and tool selection |
 | `EXECUTION` | Tool execution (policy-gated by app tier) |
+| `VERIFICATION` | Outcome verification — **gating, not advisory** (see below) |
+
+### Verification Gate (same-turn + cross-turn)
+
+Every actuating turn (`mobile_action`/`browser_script` present) runs
+`TurnExecutionPhaseRunner.verifyTurnOutcome` → `OutcomeVerifier.verifyTurn`
+(`agent/OutcomeVerifier.kt`): structured criteria (foreground-package, field-text,
+sent-message bubble, recipient context) plus the `[unverified]` marker from action
+executors. `VERIFY ...` lines are written into history, so the model sees the verdict
+next turn, and `RuntimeEventBus` emits `VERIFICATION_PASSED/FAILED`.
+
+Completion is gated: `AgentTurnRunner.decideTurnOutcome` converts an unverified
+`complete_task(success)` into a recoverable `TurnOutcome.Error("OUTCOME_NOT_VERIFIED...")`
+— both when the current turn actuated without proof (`blocksUnverifiedCompletion`) and
+when an **earlier** turn's actuation is still unverified (`TaskVerificationTracker`,
+`agent/TaskVerificationTracker.kt`: only a fresh `VERIFIED` assessment clears the flag;
+observation-only turns deliberately do not). Pure `failure` completions and
+non-actuating turns are unaffected. `CompleteTaskTool` itself is inert — enforcement
+lives in these two gates.
 
 ### Trace Artifacts (Per Turn)
 

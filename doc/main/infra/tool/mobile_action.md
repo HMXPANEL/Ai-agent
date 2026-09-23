@@ -162,6 +162,12 @@ The tap-to-focus fallback is disabled in VD mode because the IME may land on the
 
 Each attempt explicitly checks for `ActionResult.Cancelled` and propagates it as `ActionOutcome.Cancelled` rather than falling through to the next attempt.
 
+Result text is verified by `TextVerification.verify(requested, actual, hint)`
+(`tool/action/TextVerification.kt`): `EXACT` (field reads back the requested text),
+`STILL_HINT_OR_EMPTY` (field still shows hint/empty — typed-but-unsent or write failed),
+`MISMATCH` (anything else, incl. unreadable field → `verified=false`). A sent-message
+check additionally requires a non-editable bubble, so typed-but-unsent text fails verification.
+
 ### scroll
 
 `scroll` accepts a content direction, not finger direction:
