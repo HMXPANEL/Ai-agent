@@ -45,6 +45,23 @@ All day-to-day work uses the **debug** APK. The **release** APK is only for ship
 - Android device or emulator with USB debugging enabled
 - ADB installed and accessible
 - OpenAI API key (for cloud backend) OR compatible Android device (for local LLM)
+- JDK 17 (`source/targetCompatibility` + `jvmTarget` are all 17; Gradle wrapper 8.11.1 ships itself)
+- Android SDK with platform 36 + current build-tools (`compileSdk/targetSdk 36`, AGP 8.9.1,
+  Kotlin 2.3.0 — versions pinned in `build.gradle.kts` / `app/build.gradle.kts`)
+- 4 GB Gradle heap (`org.gradle.jvmargs=-Xmx4096m`; R8 OOMs at 2 GB) and 2 GB unit-test heap
+  (`maxHeapSize = "2g"` — Robolectric + Conscrypt/BouncyCastle + OpenAI SDK + MockWebServer)
+- Target devices run Android 12+ (`minSdk 31`); Shizuku + F-Droid Termux + Chrome needed for
+  the VD / shell / browser features respectively (all optional individually)
+
+### Known test gaps (do not assume coverage)
+
+- `storage/BackupManager` (create/restore/list/rollback) has **zero direct tests** — P0 gap;
+  only the adjacent `history/ChatBackup` is covered. Restore is not verified.
+- `protocol/` (pure data) and `debug/` (dev tooling) have no test dirs — P2, low risk.
+- Real-device validation (Shizuku binder, VD lifecycle, Termux on OEM ROMs, demo E2E) is
+  pending for Phases 1–4; CI-green ≠ device-proven. No sustained perf benchmark exists.
+- Full inventory: `docs/audit/07-TEST-COVERAGE.md`; build/resource facts:
+  `docs/audit/08-BUILD-AND-RESOURCE-AUDIT.md`.
 
 ## Quick Start
 
