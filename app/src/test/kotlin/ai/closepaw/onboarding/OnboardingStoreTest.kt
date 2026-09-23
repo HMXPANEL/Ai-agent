@@ -6,6 +6,7 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
+import io.mockk.verify
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -109,6 +110,14 @@ class OnboardingStoreTest {
         assertThat(plainBacking).doesNotContainKey("auth_method")
         // Completion flag preserved across migration
         assertThat(plainBacking["onboarding_completed"]).isEqualTo(true)
+        verify(exactly = 1) { context.deleteSharedPreferences("onboarding_secure_prefs") }
+    }
+
+    @Test
+    fun `migrateIfNeeded on fresh install does not touch legacy secure prefs`() {
+        OnboardingStore(context).migrateIfNeeded { false }
+
+        verify(exactly = 0) { context.deleteSharedPreferences("onboarding_secure_prefs") }
     }
 
     @Test

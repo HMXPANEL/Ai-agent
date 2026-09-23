@@ -26,6 +26,7 @@ class OnboardingStore(private val context: Context) {
 
         // Legacy keys removed in schema v2 — retained only for migration cleanup.
         private const val LEGACY_KEY_AUTH_METHOD = "auth_method"
+        private const val LEGACY_SECURE_PREFS_NAME = "onboarding_secure_prefs"
 
         private const val CURRENT_SCHEMA_VERSION = 2
     }
@@ -77,8 +78,8 @@ class OnboardingStore(private val context: Context) {
      * - No schema key present → brand-new install (or pre-onboarding legacy user).
      *   Detect existing users via [hasLegacyUsageEvidence] and mark them complete.
      * - Schema < 2 → strip legacy keys introduced before the auth-cleanup split
-     *   ([LEGACY_KEY_AUTH_METHOD]). The legacy encrypted prefs file
-     *   `onboarding_secure_prefs` is left on disk; nothing reads it anymore.
+     *   ([LEGACY_KEY_AUTH_METHOD]) and delete the unread legacy encrypted prefs file
+     *   ([LEGACY_SECURE_PREFS_NAME]); nothing reads it anymore.
      * - Any run: if onboarding is not complete but [hasLegacyUsageEvidence] still
      *   reports an existing user, mark complete. Recovers users whose
      *   `onboarding_prefs` was wiped/reset (e.g. selective Auto Backup restore,
@@ -109,6 +110,7 @@ class OnboardingStore(private val context: Context) {
                 .remove(LEGACY_KEY_AUTH_METHOD)
                 .putInt(KEY_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION)
                 .apply()
+            runCatching { context.deleteSharedPreferences(LEGACY_SECURE_PREFS_NAME) }
             Log.d(TAG, "Migrated onboarding schema $existing → $CURRENT_SCHEMA_VERSION")
         }
 

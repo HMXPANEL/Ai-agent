@@ -916,12 +916,16 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun deriveOpenAiAuthUiState() {
-        val cred = kotlinx.coroutines.runBlocking { authStore.get(LLMProvider.OPENAI_API) }
-        val oauthCred = cred as? AuthCredential.OAuth
-        openAiAuthUiState = if (oauthCred != null) {
-            ai.closepaw.ui.settings.OpenAiAuthUiState.SignedIn(oauthCred.email)
-        } else {
-            ai.closepaw.ui.settings.OpenAiAuthUiState.SignedOut
+        // Async: AuthStore reads EncryptedSharedPreferences (Keystore disk I/O) and must
+        // never block onCreate. State starts SignedOut and flips when the read lands.
+        lifecycleScope.launch {
+            val cred = runCatching { authStore.get(LLMProvider.OPENAI_API) }.getOrNull()
+            val oauthCred = cred as? AuthCredential.OAuth
+            openAiAuthUiState = if (oauthCred != null) {
+                ai.closepaw.ui.settings.OpenAiAuthUiState.SignedIn(oauthCred.email)
+            } else {
+                ai.closepaw.ui.settings.OpenAiAuthUiState.SignedOut
+            }
         }
     }
 }
