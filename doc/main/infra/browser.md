@@ -163,6 +163,13 @@ a browser-specific rule after the BLOCKED-app floor and before user allow-lists:
 
 The session and persistent allow-lists do not bypass the SMART-mode browser prompt.
 
+Two gating mechanisms coexist for this tool: the per-call `DefaultBrowserScriptCapabilityGate`
+(flag → Shizuku → permission → preflight, cheapest-first, distinct `Unavailable` codes) runs on
+every execution, while the Phase-3 `CapabilityManager` performs advertisement-time filtering —
+`browser_script` currently declares no `requiredCapabilities`, so `BROWSER_CDP` stays `UNKNOWN`
+in that system and this gate is the one that actually blocks. See
+[tools.md](tools.md) §CapabilityManager.
+
 ## Verification
 
 JVM coverage:

@@ -145,3 +145,13 @@ Thin wrapper for privileged Shizuku binder calls:
 | `bypassHiddenApis()` | `HiddenApiBypass` for `setDisplayId()` and `ServiceManager` |
 
 Supporting files: `ShizukuServiceProxyProvider`, `ShizukuDisplayTransport`, `ShizukuInputTransport`, `ShizukuActivityTaskTransport`, `ShizukuActivityLauncher`, `ShizukuShellExecutor`, `ShizukuRuntimeGateway`.
+
+## Requirements & Fallback
+
+Virtual Display strictly requires Shizuku (installed + binder reachable + permission granted).
+`PlatformFactory` checks availability/permission before creating the platform: when Shizuku is
+absent or permission is denied, a VD-mode session **falls back to `AccessibilityPlatform`
+(real screen) with a warning log** — the session still runs, just not isolated. Binder death
+mid-session drives the arbiter to `Broken` (proxies cleared); a later `start()` cleans leaked
+display/reader state first. Everything outside VD + browser CDP (LLM/chat, memory, backup,
+settings, Termux, overlays) works without Shizuku.
