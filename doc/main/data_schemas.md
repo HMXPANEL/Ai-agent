@@ -53,12 +53,12 @@ File: `app/src/main/kotlin/ai/closepaw/onboarding/OnboardingState.kt:43`
 | Hierarchy             | Count | Subtypes                                                                                                |
 |-----------------------|-------|---------------------------------------------------------------------------------------------------------|
 | `PermissionStepState` | 6     | `Checking`, `Ready`, `OpeningSettings`, `Satisfied`, `Unsatisfied`, `Skipped`                           |
-| `ApiKeyStepState`     | 10    | `Empty`, `Editing`, `Validating`, `Invalid`, `TransientError`, `Valid`, `OAuthReady`, `OAuthInProgress`, `OAuthSuccess`, `OAuthError` |
+| `ApiKeyStepState`     | 11    | `Empty`, `Editing`, `Validating`, `Invalid`, `TransientError`, `Valid`, `OAuthReady`, `OAuthInProgress`, `OAuthFinishing`, `OAuthSuccess`, `OAuthError` |
 | `DemoStepState`       | 7     | `Ready`, `Preflight`, `Running`, `Success`, `Failure`, `CredentialError`, `Skipped`                     |
 
 Only one is active at a time per the file's comment ("Per-step transient state (one active at a time)"). Hierarchies are disjoint — no shared common state beyond the marker interface — so the marker exists more for grouping than for polymorphism.
 
-**Observation:** `ApiKeyStepState` overloads the password step with both manual key entry (6 states) and OAuth (4 states). Splitting into two sealed hierarchies (`ManualKeyState`, `OAuthState`) would mirror the `ApiKeyAuthMethod` enum and reduce per-state guards in the ViewModel.
+**Observation:** `ApiKeyStepState` overloads the password step with both manual key entry (6 states) and OAuth (5 states, incl. `OAuthFinishing`). Splitting into two sealed hierarchies (`ManualKeyState`, `OAuthState`) would mirror the `ApiKeyAuthMethod` enum and reduce per-state guards in the ViewModel.
 
 ## 5. TodoSnapshot — String status parsed via valueOf
 

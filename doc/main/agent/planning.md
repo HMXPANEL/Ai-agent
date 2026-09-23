@@ -132,7 +132,7 @@ is handled by per-turn `Compactor` summarization (see
 | **History** | User/assistant messages + function calls + function outputs, classified by `MessageKind` |
 | **Current Screen** | Current turn always includes full screen JSON in observation section |
 | **Screen History** | Each turn records screen JSON as `ResponseItem.Message(kind = SCREEN_OBSERVATION)` |
-| **Screen Compression** | `HistoryManager` proactively downgrades old screens on every `addItem()`; keeps last `HistoryConfig.recentFullScreens` (default 3) full |
+| **Screen Compression** | `HistoryManager` proactively downgrades old screens on every `addItem()`; keeps last `HistoryConfig.recentFullScreens` (default 2) full |
 | **Context-window pressure** | Per-turn `Compactor.maybeCompact` LLM-summarizes the older prefix when tokens exceed `contextWindow − reserve`; reactive `forceCompactNow` retries once on `ContextWindowExceededException` |
 | **Compression owner** | Single owner: `HistoryManager` for screen downgrade; `Compactor` for cross-turn summarization. `PromptBuilder` is read-only pass-through. |
 

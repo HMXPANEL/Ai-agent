@@ -120,7 +120,9 @@ Touch gate: during agent gesture injection, capsule temporarily becomes not-touc
 
 ## 7. Main App Visibility Convergence
 
-`MainActivity` calls `onMainAppVisible()` in `onCreate/onStart/onResume/onNewIntent`.
+`MainActivity` calls `onMainAppVisible()` in `onStart`/`onResume`/`onNewIntent`, and
+`onMainAppHidden()` in `onStop` (intentionally not `onPause` — the activity is still drawn
+between the two; `MainActivity.kt:367-390`).
 This is an explicit convergence mechanism to enforce `MAIN_APP => no system overlays` even if accessibility window events are delayed.
 
 ## Related Docs

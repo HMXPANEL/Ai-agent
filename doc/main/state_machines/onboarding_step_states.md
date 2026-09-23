@@ -10,7 +10,7 @@ All three implement the marker `OnboardingStepState`, which is what the ViewMode
 
 ## Why three hierarchies, not one
 
-**Disjoint domains.** Permission states model OS settings round-trips. API-key states model network credential validation and OAuth. Demo states model an agent run with credential-error fallback. The states do not share semantics; merging them produces a 23-case sealed type whose members are mutually exclusive by construction.
+**Disjoint domains.** Permission states model OS settings round-trips. API-key states model network credential validation and OAuth. Demo states model an agent run with credential-error fallback. The states do not share semantics; merging them produces a 24-case sealed type whose members are mutually exclusive by construction.
 
 **Per-step UI dispatch.** `OnboardingScreen.kt` routes each `WizardStep` to a dedicated composable (`PermissionStepContent`, `ApiKeyStepContent`, `DemoStepContent`). Each renderer's `when` is exhaustive over its own sealed type — the compiler proves every state is handled.
 

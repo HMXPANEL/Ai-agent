@@ -75,7 +75,7 @@ To control growth, `HistoryManager` proactively keeps only the last `recentFullS
 
 `Screen: {N} elements (compressed)`
 
-Default retained full observations: `recentFullScreens = 3`.
+Default retained full observations: `recentFullScreens = 2` (`history/HistoryConfig.kt`).
 
 When older history is summarized by `Compactor`, a single `ResponseItem.Message(kind = MessageKind.COMPACTION_SUMMARY)` replaces the discarded prefix. `COMPACTION_SUMMARY` is rendered as a **user-role** `easy_input_message` whose content is prefixed with:
 

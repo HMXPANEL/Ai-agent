@@ -27,7 +27,7 @@ Virtual Display modes, plus native a11y scroll trails in Accessibility mode.
 
 > See: `app/ServiceOverlayController.kt` (`isMainAppResumed`, `onMainAppVisible`, `onMainAppHidden`)
 
-`MainActivity` calls `onMainAppVisible()` from `onResume` and `onMainAppHidden()` from `onStop` (intentionally not `onPause` — between the two MainActivity is still drawn on screen). The controller treats this as authoritative over accessibility window-state events:
+`MainActivity` calls `onMainAppVisible()` from `onStart`/`onResume`/`onNewIntent` and `onMainAppHidden()` from `onStop` (intentionally not `onPause` — between the two MainActivity is still drawn on screen). The controller treats this as authoritative over accessibility window-state events:
 
 - While `isMainAppResumed = true`, any `WINDOW_STATE_CHANGED` that would flip `userLocation` away from `MAIN_APP` is dropped. This blocks stale launcher events and OEM "Open with" dialog windows (e.g. Nubia's `com.android.permissioncontroller.OAlertDialog` on `open_app`) from spuriously surfacing the system capsule on top of the in-app capsule.
 - On `onMainAppHidden`, the flag clears AND `userLocation` flips to `OTHER_APP` **only if it is still `MAIN_APP`**. This catches the race where the new foreground app's window-state event arrived (and was dropped) before MainActivity finished stopping. The flip is conditional because `VirtualDisplayViewerActivity.onStart` calls `onViewerOpened()` (setting `userLocation = VD_VIEWER`) before `MainActivity.onStop` fires; clobbering that to `OTHER_APP` would lose the edge glow on the first viewer entry until a second user action re-triggered `onViewerOpened`.
@@ -165,7 +165,7 @@ ui/overlay/
 │   ├── StatusIslandCompose.kt       # Status pill composable
 │   └── ActionVisualizerCompose.kt   # Click/swipe rendering
 ├── model/
-│   ├── CapsuleMode.kt               # 8 modes (sealed interface)
+│   ├── CapsuleMode.kt               # 9 modes (sealed interface, incl. Hidden)
 │   ├── CapsuleContext.kt            # MAIN_APP / SCREEN_VIEWING / BACKGROUND
 │   ├── CapsuleRenderSpec.kt        # Mode → visual properties + NavSpec
 │   └── GlowState.kt                # Glow state enum + deriveGlowState()
