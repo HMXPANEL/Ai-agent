@@ -48,10 +48,12 @@ Three layers are distinct: the **LLM tool call** (untrusted model output),
 - Tokens exist decrypted in memory at request time; JWTs parsed without signature
   verification (both flagged HIGH RISK in `docs/audit_auth_store_kt.md` /
   `docs/audit_openai_oauth_kt.md`).
-- Termux bridge `127.0.0.1:18422` has no auth token (loopback reliance; P1: add token or
-  record rationale).
-- No execution-time capability re-check (P1).
-- `security-crypto:1.1.0-alpha06` is alpha in the auth path (P0-track stable).
+- Termux bridge `127.0.0.1:18422` has no auth token. Threat model assessed 2026-09-24:
+  reachable by any on-device INTERNET app, but workspace jail + capability/exec caps +
+  no credentials crossing bound the impact; bearer-token design specified in
+  `termux_shell.md`, deferred until device-verifiable (P1).
+- Execution-time capability re-check: implemented 2026-09-24 (`ToolRouter` + tests).
+- `security-crypto` migrated 1.1.0-alpha06 → 1.1.0 stable (2026-09-24).
 - Legacy `onboarding_secure_prefs` file left on disk post-migration; nothing reads it
   (`OnboardingStore.kt`); wipe queued (P2).
 - `OAuthCodexValidator` is dead code — sign-in path does not validate (wire-or-delete, P2).

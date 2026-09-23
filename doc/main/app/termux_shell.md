@@ -113,3 +113,15 @@ Primary files:
   those workflows.
 - Shell security hardening beyond v1 is deferred; loopback-only binding and workspace cwd validation
   are the v1 boundary.
+- **Loopback auth threat model (assessed 2026-09-24, intentionally deferred):** the bridge
+  listens on `127.0.0.1:18422` with no token, so any on-device process — including a
+  third-party app holding `INTERNET` — can reach `/v1/health` and `/v1/exec`. Blast radius
+  is bounded: execution is jailed to `~/closepaw/workspace/` (`workspace_escape` 400),
+  single-command per call, 120 s timeout, 64 KB output cap, single-exec lock, process-group
+  kill on disconnect, and no credentials ever cross the bridge (auth lives in ClosePaw's
+  `AuthStore`, not Termux). A bearer-token design (app-generated token deployed via
+  `RUN_COMMAND` env + `X-ClosePaw-Token` header + constant-time bridge check + mismatch
+  redeploy) is specified but **not implemented**: it touches the Python daemon, the Kotlin
+  client, token persistence/rotation, and mismatch recovery, none of which can be verified
+  without a live Termux — shipping it blind risks bricking the working integration. Revisit
+  with a device in the loop (Phase H matrix).
