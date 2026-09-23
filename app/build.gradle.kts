@@ -160,8 +160,8 @@ kotlin {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.security:security-crypto:1.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     
     // Compose BOM - manages all Compose library versions
@@ -234,7 +234,7 @@ dependencies {
     testImplementation("com.google.truth:truth:1.4.2")
     // Pure Java JSON library for unit tests (Android's JSONObject is not available in unit tests)
     testImplementation("org.json:json:20240303")
-    testImplementation("com.squareup.okhttp3:mockwebserver:5.2.1")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 
     // Instrumented QA tests (Compose UI Test on emulator/device)
     androidTestImplementation(composeBom)

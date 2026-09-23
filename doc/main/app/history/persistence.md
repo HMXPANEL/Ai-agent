@@ -72,7 +72,7 @@ failure; `restoreIfEmpty()` auto-restores after reinstall when the store is empt
 auto-backup is triggered best-effort on session end. Credentials are **deliberately
 excluded** (`AuthStore` never enters a backup).
 
-> **Status: UNTESTED (P0 gap).** `storage/BackupManager` has zero direct unit tests —
-> only the adjacent `history/ChatBackup` is covered (`ChatBackupTest`). Do not treat
-> restore as verified until `BackupManagerTest` (create/restore/list/rollback, tamper,
-> missing sidecar) exists.
+> **Status: COVERED (2026-09-24).** `app/src/test/.../storage/BackupManagerTest.kt` covers
+> create/list/restore, checksum mismatch, missing/malformed metadata, corrupted archive,
+> deleted data file, auto-backup cadence, and credential exclusion. Restore failures are
+> values (`RestoreReport(success=false)`), never throws.
