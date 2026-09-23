@@ -59,8 +59,9 @@ Three layers are distinct: the **LLM tool call** (untrusted model output),
 ## Explicitly NOT claimed
 
 - No sandbox around shell/Termux beyond the jail + caps above. No execution sandbox for
-  browser JS beyond Chrome itself. Memory (`filesDir/memory/*.md`) is unencrypted and
-  unredacted. Real-device validation of Shizuku/VD/Termux flows is pending (see
+  browser JS beyond Chrome itself. Memory files are unencrypted at rest, but agent-written
+  entries are redacted through `SensitiveDataFilter` before persistence (explicit user
+  file edits stay verbatim). Real-device validation of Shizuku/VD/Termux flows is pending (see
   `docs/audit/04-MISSING-FEATURES.md`).
 
 ## Related

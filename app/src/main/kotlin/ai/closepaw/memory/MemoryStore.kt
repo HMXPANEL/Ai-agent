@@ -1,6 +1,7 @@
 package ai.closepaw.memory
 
 import android.util.Log
+import ai.closepaw.util.SensitiveDataFilter
 import java.io.File
 import java.io.IOException
 import java.time.ZonedDateTime
@@ -16,7 +17,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 class MemoryStore(
     private val memoryDir: File,
     val maxContentLength: Int = DEFAULT_MAX_CONTENT_LENGTH,
-    val maxFileBytes: Int = DEFAULT_MAX_FILE_BYTES
+    val maxFileBytes: Int = DEFAULT_MAX_FILE_BYTES,
+    private val sensitiveDataFilter: SensitiveDataFilter = SensitiveDataFilter()
 ) {
     companion object {
         private const val TAG = "MemoryStore"
@@ -105,7 +107,10 @@ class MemoryStore(
             Log.w(TAG, "Rejected empty memory content for $scope/$section")
             return false
         }
-        val entry = formatEntry(sanitized)
+        // Agent-written entries pass through the shared credential filter so secrets
+        // observed on screen are never persisted (same shapes as trace redaction).
+        // Explicit full-file user edits via write() are left byte-identical by design.
+        val entry = formatEntry(sensitiveDataFilter.redact(sanitized))
         val newContent =
             if (!spec.file.exists()) {
                 buildSkeleton(spec, section, entry)

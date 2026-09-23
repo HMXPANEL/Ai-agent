@@ -53,7 +53,10 @@ returns and exactly what gets injected into the prompt via `MemoryRecaller`.
 There is no canonicalizer, no migration pass, no on-read normalization. The
 Settings → Memory editor saves the verbatim buffer; the agent's `append` path
 inserts under the named heading following explicit insertion rules
-(see [Append insertion rules](#append-insertion-rules)).
+(see [Append insertion rules](#append-insertion-rules)). Agent-written entries pass
+through the shared `SensitiveDataFilter` (same credential shapes as trace redaction),
+so secrets observed on screen are never persisted; explicit full-file user edits via
+`write()` stay byte-identical by design. Memory files are unencrypted at rest.
 
 The skeleton produced by `append()` when a file does not yet exist follows the
 schema below, but once a file exists Settings can freely reshape it — `append`
