@@ -14,6 +14,19 @@ stays in agent system prompts; app-specific behavior lives in `app_skills/<packa
 
 ## Tool Execution Lifecycle
 
+Three distinct layers — do not conflate them:
+
+1. **LLM tool call** — the model emits `ToolCallDone(callId, name, arguments)` over SSE.
+   `Turn.convertToToolCallRequest` parses args leniently (`{}` on JSON failure) and
+   `TurnToolPolicy.arbitrateToolCalls` hoists cognitive tools / drops `complete_task`
+   when a screen action is present. Nothing has executed yet.
+2. **ToolRouter execution** — `ToolRouter.execute()` runs VALIDATING → POLICY → approval →
+   `ToolInvocation.execute()`, producing `Success`/`Error`/`Cancelled`. This is where policy,
+   approval, TOCTOU re-check, and cancellation live.
+3. **Platform operation** — the tool implementation calls the atomic
+   `AndroidPlatform.performAction(UIAction)` (exactly one platform API call; fallbacks such as
+   node-click → gesture-tap are orchestrated above the platform in `tool/action/` executors).
+
 ```
 ┌──────────────┐
 │  VALIDATING  │ ─── Invalid ──► ERROR
@@ -126,6 +139,25 @@ Classifies Android packages into security tiers.
 
 **Fail-closed:** `fromAssets()` throws `IllegalStateException` if `app_tiers.json` is missing, corrupt, or contains unknown tier strings. Session cannot start without a valid classifier.
 
+### CapabilityManager (Phase 3)
+
+→ See: `tool/Capability.kt`, `tool/CapabilityManager.kt`, `tool/AndroidDeviceCapabilitySource.kt`
+
+Advertisement-time tool filtering, separate from per-call policy. Seven capabilities
+(`ACCESSIBILITY`, `OVERLAY`, `TERMUX_SHELL`, `BROWSER_CDP`, `SHIZUKU`, `VIRTUAL_DISPLAY`,
+`BACKGROUND_EXECUTION`); each resolves to `AVAILABLE`/`UNAVAILABLE`/`UNKNOWN`, and only
+`AVAILABLE` is usable — everything else fails closed. `ToolSpec.requiredCapabilities`
+defaults to empty (no behavior change); `Turn.prepareRequest` sends
+allowlist ∩ `ToolRegistry.getAvailable(manager)` to the LLM.
+
+Current scope (verified): only `MobileActionTool`/`SystemButtonTool` (→`ACCESSIBILITY`) and
+`TermuxShellTool` (→`TERMUX_SHELL`) declare requirements, so the remaining capabilities stay
+`UNKNOWN` with no additional filtering. There is **no execution-time re-check**: a capability
+lost between prompt construction and execution is not re-verified by `ToolRouter`
+(queued P1 hardening). Browser/CDP gating additionally lives in the older
+`DefaultBrowserScriptCapabilityGate` (flag → Shizuku → permission → preflight), not in this
+system — the two mechanisms coexist.
+
 ---
 
 ## Built-in Tools
@@ -144,6 +176,7 @@ Classifies Android packages into security tiers.
 | `shell` | Execute file-related shell commands | `command`, optional `timeout_ms` |
 | `termux_shell` | Execute full Linux bash through the Termux bridge | `command`, optional `cwd`, `timeout_seconds`, `env` |
 | `remember_experience` | Save reusable learning to long-term memory | `category`, `content`, optional `package_name` |
+| `activate_skill` | Activate an installed agent skill for this turn | `skill` name | Registered only when the skill catalog is non-empty (`SessionToolingBootstrapper` skips it otherwise, so the LLM never sees a dead tool) |
 | `browser_script` | Run a JS automation script against the user's real Chrome over CDP | `script`, optional `timeout_ms` |
 
 `delegate_task` is registered lazily only when the selected agent definition requires delegation.

@@ -121,6 +121,14 @@ Startup: load catalog → apply base-URL overrides → build factory with the ap
 
 Fallback: if `llm_models.json` missing/malformed, uses built-in catalog (`glm-5`). For local backend, returns `LFMLLMClient`.
 
+Per-turn resolution (`agent/AgentModelResolver.kt`): `TurnPlanningPhaseRunner` resolves
+`config.mainModel` through the catalog + factory. On catalog miss or factory failure it falls
+back to the session client with the raw model name as `modelId` and `supportsVision=false`
+(vision images are then stripped from the prompt). There is **no cross-provider fallback** —
+a dead provider fails the turn (retry policy above) rather than silently switching providers.
+Subagents inherit the parent's `mainModel` (`SubAgentRunner`); provider selection is global,
+not per-chat (see `docs/PROVIDER_FORENSIC_AUDIT.md`).
+
 ---
 
 ## Retry Infrastructure
