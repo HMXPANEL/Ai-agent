@@ -1,3 +1,4 @@
+> **Current-status note (2026-09-24, Phase 0):** "two implementations" is stale — four clients exist (`OpenAIResponseClient`, `ChatCompletionClient`, `CodexResponseClient`, `LFMLLMClient`; see `docs/BASELINE.md` D-003).
 FILE: /mnt/sdcard/AIProjects/closepaw-main/app/src/main/kotlin/ai/closepaw/llm/LLMClient.kt
 PACKAGE: ai.closepaw.llm
 

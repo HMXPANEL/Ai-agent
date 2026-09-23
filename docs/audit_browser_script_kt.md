@@ -1,3 +1,4 @@
+> **Current-status note (2026-09-24, Phase 0):** the audited path is stale — the tool lives at `app/src/main/kotlin/ai/closepaw/tool/impl/BrowserScriptTool.kt` (see `docs/BASELINE.md` D-002). Findings below are otherwise current.
 FILE: /mnt/sdcard/AIProjects/closepaw-main/app/src/main/kotlin/ai/closepaw/browser/script/BrowserScriptTool.kt
 PACKAGE: ai.closepaw.browser.script (inferred)
 

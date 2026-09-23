@@ -1,3 +1,4 @@
+> **Current-status note (2026-09-24, Phase 0):** the "`snapshot(enabled)` is suspend" claim is stale — the snapshot function is synchronous (see `docs/BASELINE.md` D-006).
 FILE: /mnt/sdcard/AIProjects/closepaw-main/app/src/main/kotlin/ai/closepaw/termux/TermuxBridgeManager.kt
 PACKAGE: ai.closepaw.termux
 

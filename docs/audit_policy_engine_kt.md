@@ -1,3 +1,4 @@
+> **Current-status note (2026-09-24, Phase 0):** the "browser_script always requires approval even in AUTO_APPROVE" claim is stale — code returns Allow in AUTO_APPROVE (see `docs/BASELINE.md` D-004).
 FILE: /mnt/sdcard/AIProjects/closepaw-main/app/src/main/kotlin/ai/closepaw/tool/PolicyEngine.kt
 PACKAGE: ai.closepaw.tool
 
