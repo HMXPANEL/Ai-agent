@@ -310,7 +310,7 @@ supplements:
 ### downgradeOldScreens (kept)
 
 On every new `SCREEN_OBSERVATION`, `HistoryManager.downgradeOldScreens()` rewrites
-all but the last `recentFullScreens` (default 3) screen messages to a one-line
+all but the last `recentFullScreens` (default 2, `history/HistoryConfig.kt`) screen messages to a one-line
 summary (`"Screen: N elements (compressed)"`). This is the cheap, lossless,
 local pass that runs before any LLM-driven compaction is needed.
 

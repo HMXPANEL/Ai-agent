@@ -174,7 +174,9 @@ Termux runtime wiring is also captured at session creation. `SessionServices.cre
 `TermuxBridgeManager.ensureReadyForSession(...)` to restart an already-deployed idle bridge without
 running package install, then snapshots `TermuxCapabilitySnapshot`. `SessionToolingBootstrapper`
 uses that snapshot to register `termux_shell`, and `AgentRoleDef.resolve(...)` uses the same
-snapshot to inject the workspace-shell prompt for Standalone, Planner, and Executor roles. The
+snapshot to inject the workspace-shell prompt into the resolved Default role (`AgentRoleDef.resolve(...)`
+uses the same snapshot). The unified runtime has a single Default role — there are no separate
+Standalone/Planner/Executor roles. The
 snapshot remains fixed for the session, including Hot Idle follow-up tasks.
 
 → See: [termux_shell.md](../app/termux_shell.md) for setup states, bridge lifecycle, and OEM limits.
@@ -331,6 +333,25 @@ Suspension bridge between the `ask_user` tool and the UI. Uses `AtomicReference<
 - **Normal**: User responds → `deliver()` → deferred completes → tool returns success
 - **Timeout**: `withTimeoutOrNull(5min)` → returns `null` → `finally` clears state → tool returns "timed out"
 - **Cancellation**: `cancel()` → `CancellationException` → tool returns `Cancelled`
+
+---
+
+## Device State (Phase 4)
+
+→ See: `device/HmxDeviceState.kt`, `device/HmxDeviceStateProvider.kt`
+
+Immutable per-task snapshot: `timestampMs`, `foregroundPackage`, `accessibilityAvailable`,
+`overlayGranted`, `capabilities`, `display`, `sessionPhase`, plus per-field `fieldStates`
+(`DeviceStateField`: FOREGROUND_APP/ACCESSIBILITY/OVERLAY/CAPABILITIES/DISPLAY/SESSION).
+Each field carries its own `CapabilityState`, so callers distinguish known-absent
+(`UNAVAILABLE`) from could-not-read (`UNKNOWN`); only `AVAILABLE` means usable. No PII —
+package names and display metrics only.
+
+The provider caches one snapshot for `DEFAULT_MAX_AGE_MS = 2_000ms`; `current()` re-reads
+when stale, `refresh()` forces a read, `observe()` exposes a `StateFlow`. Every probe failure
+degrades only its field and never throws. Refreshed once per task in
+`SessionAgentRunner.start`. Battery/network fields are **deferred** (not implemented).
+Device-gated CI/device validation was still pending at implementation time.
 
 ---
 

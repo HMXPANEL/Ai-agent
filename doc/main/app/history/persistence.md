@@ -52,3 +52,27 @@ Low-level file I/O. Key operations: `writeSession()`, `readSession()`, `writeSna
 - **Context files**: `context-{yyyy-MM-ddTHH-mm-ss}-{uuid}.json` (checkpoint snapshots)
 - **JSON config**: pretty print, ignore unknown keys, encode defaults
 - All I/O on `Dispatchers.IO`
+
+## ClosePawStorage + BackupManager (Phase 2)
+
+→ See: `storage/ClosePawStorage.kt`, `storage/BackupManager.kt`
+
+`ClosePawStorage` singleton roots user data at the app-external `ClosePaw/` directory
+(`memory/`, `sessions/`, `backups/`, `settings/`, `skills/`, `diagnostics/`, `exports/`,
+`metadata/`; schema v2, format `1.0.0`). Note: the original plan called for a MediaStore
+user-visible directory, but `PHASE_2_STATUS.md` records it as unavailable via SDK, so the
+app-external root shipped instead — **uninstall survival is weakened and must be
+re-verified on device** (queued P1).
+
+`BackupManager.createBackup()` exports session records + non-secret prefs as versioned,
+checksummed, gzipped JSON (`closepaw_backup_<ts>.json.gz` + `.meta.json` with SHA-256);
+`restoreBackup()` requires the sidecar, verifies checksum, adopts only new/strictly-newer
+records via `ChatBackup.verify/reconcile`, stages temp + atomic rename with rollback on
+failure; `restoreIfEmpty()` auto-restores after reinstall when the store is empty; daily
+auto-backup is triggered best-effort on session end. Credentials are **deliberately
+excluded** (`AuthStore` never enters a backup).
+
+> **Status: UNTESTED (P0 gap).** `storage/BackupManager` has zero direct unit tests —
+> only the adjacent `history/ChatBackup` is covered (`ChatBackupTest`). Do not treat
+> restore as verified until `BackupManagerTest` (create/restore/list/rollback, tamper,
+> missing sidecar) exists.
